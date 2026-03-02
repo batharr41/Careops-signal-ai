@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import './App.css';
 
-const DEMO_AGENCY_ID = localStorage.getItem('agencyId') || 'demo';
+const DEMO_AGENCY_ID = '1f027307-125d-4904-8734-0424676a717d';
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 function App() {
