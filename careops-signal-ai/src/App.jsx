@@ -1,49 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import {
-  Activity, AlertCircle, Bell, Calendar, CheckCircle, 
+  Activity, AlertCircle, Bell, Calendar, CheckCircle,
   Clock, Heart, Home, Phone, TrendingUp, Users, ChevronRight,
-  AlertTriangle
+  AlertTriangle, Sparkles, UserPlus
 } from 'lucide-react';
 import './App.css';
 
 const DEMO_AGENCY_ID = '1f027307-125d-4904-8734-0424676a717d';
 const API_URL = import.meta.env.VITE_API_URL || '';
 
-// BetweenVisits inline SVG logo icon (ECG pulse)
+// BetweenVisits logo SVG component
 function BetweenVisitsIcon({ size = 40 }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width={size} height={size}>
-      <defs>
-        <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" style={{stopColor:'#0EA5E9',stopOpacity:1}} />
-          <stop offset="100%" style={{stopColor:'#6366F1',stopOpacity:1}} />
-        </linearGradient>
-        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{stopColor:'#0F172A',stopOpacity:1}} />
-          <stop offset="100%" style={{stopColor:'#1E293B',stopOpacity:1}} />
-        </linearGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-          <feMerge>
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-      <rect x="0" y="0" width="120" height="120" rx="18" fill="url(#bgGrad)"/>
-      <rect x="1" y="1" width="118" height="118" rx="17" fill="none" stroke="#0EA5E920" strokeWidth="1.5"/>
-      <polyline
-        points="10,60 28,60 36,60 44,22 54,98 64,46 72,60 92,60 110,60"
-        fill="none"
-        stroke="url(#pulseGrad)"
-        strokeWidth="4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        filter="url(#glow)"
-      />
-      <circle cx="44" cy="22" r="5" fill="#6366F1" filter="url(#glow)"/>
-      <circle cx="54" cy="98" r="5" fill="#0EA5E9" filter="url(#glow)"/>
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="120" rx="24" fill="#2563eb"/>
+      <path d="M60 25C41.775 25 27 39.775 27 58C27 76.225 41.775 91 60 91C78.225 91 93 76.225 93 58C93 39.775 78.225 25 60 25Z" fill="none" stroke="white" strokeWidth="4"/>
+      <path d="M60 38V58L72 70" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="60" cy="58" r="4" fill="white"/>
+      <path d="M38 95L42 85" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M82 95L78 85" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round"/>
+      <rect x="50" y="18" width="20" height="8" rx="3" fill="white"/>
     </svg>
   );
 }
@@ -60,6 +37,7 @@ function App() {
             <Route path="/patients" element={<PatientList />} />
             <Route path="/patients/:id" element={<PatientDetail />} />
             <Route path="/check-in" element={<CheckInForm />} />
+            <Route path="/new-patient" element={<NewPatientForm />} />
           </Routes>
         </main>
       </div>
@@ -73,6 +51,7 @@ function Sidebar() {
     { path: '/triage', icon: AlertCircle, label: 'Triage Queue', badge: true },
     { path: '/patients', icon: Users, label: 'Patients' },
     { path: '/check-in', icon: CheckCircle, label: 'New Check-In' },
+    { path: '/new-patient', icon: UserPlus, label: 'New Patient' },
   ];
 
   return (
@@ -82,10 +61,11 @@ function Sidebar() {
           <BetweenVisitsIcon size={40} />
           <div>
             <h1 className="logo-title">BetweenVisits</h1>
-            <p className="logo-subtitle">AI Patient Monitoring</p>
+            <p className="logo-subtitle">Early Warning System</p>
           </div>
         </div>
       </div>
+
       <nav className="nav">
         {navItems.map((item) => (
           <Link key={item.path} to={item.path} className="nav-item">
@@ -95,6 +75,7 @@ function Sidebar() {
           </Link>
         ))}
       </nav>
+
       <div className="sidebar-footer">
         <div className="user-info">
           <div className="user-avatar">SJ</div>
@@ -108,6 +89,7 @@ function Sidebar() {
   );
 }
 
+// ==================== DASHBOARD ====================
 function Dashboard() {
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -115,20 +97,33 @@ function Dashboard() {
   useEffect(() => {
     fetch(`${API_URL}/api/agencies/${DEMO_AGENCY_ID}/dashboard?days=7`)
       .then(res => res.json())
-      .then(data => { setOverview(data); setLoading(false); })
-      .catch(err => { console.error('Failed to load dashboard:', err); setLoading(false); });
+      .then(data => {
+        setOverview(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load dashboard:', err);
+        setLoading(false);
+      });
   }, []);
 
-  if (loading) return <div className="loading">Loading dashboard...</div>;
-  if (!overview) return <div className="error">Failed to load dashboard data</div>;
+  if (loading) {
+    return <div className="loading">Loading dashboard...</div>;
+  }
 
-  const riskCounts = overview.riskDistribution.reduce((acc, item) => {
-    acc[item.risk_level] = parseInt(item.count); return acc;
-  }, {});
+  if (!overview) {
+    return <div className="error">Failed to load dashboard data</div>;
+  }
 
-  const alertCounts = overview.pendingAlerts.reduce((acc, item) => {
-    acc[item.severity] = parseInt(item.count); return acc;
-  }, {});
+  const riskCounts = overview.riskDistribution ? overview.riskDistribution.reduce((acc, item) => {
+    acc[item.risk_level] = parseInt(item.count);
+    return acc;
+  }, {}) : {};
+
+  const alertCounts = overview.pendingAlerts ? overview.pendingAlerts.reduce((acc, item) => {
+    acc[item.severity] = parseInt(item.count);
+    return acc;
+  }, {}) : {};
 
   return (
     <div className="dashboard">
@@ -138,96 +133,94 @@ function Dashboard() {
           <p className="page-subtitle">Real-time patient monitoring and alerts</p>
         </div>
         <div className="header-actions">
-          <button className="btn-secondary"><Calendar size={18} />Last 7 days</button>
+          <Link to="/check-in" className="btn-primary">
+            <CheckCircle size={18} />
+            New Check-In
+          </Link>
         </div>
       </header>
 
       <div className="stats-grid">
-        <StatCard title="Critical Alerts" value={alertCounts.critical || 0} icon={AlertCircle} trend="Require immediate attention" color="red" />
-        <StatCard title="Elevated Risk" value={alertCounts.elevated || 0} icon={AlertTriangle} trend="Review within 2 hours" color="orange" />
-        <StatCard title="Total Check-Ins" value={overview.checkInStats.total} icon={CheckCircle} trend={overview.checkInStats.period} color="green" />
-        <StatCard title="Active Patients" value={Object.values(riskCounts).reduce((a, b) => a + b, 0)} icon={Users} trend="Under care" color="blue" />
+        <div className="stat-card">
+          <div className="stat-icon blue"><Users size={24} /></div>
+          <div className="stat-info">
+            <span className="stat-value">{overview.totalPatients || 0}</span>
+            <span className="stat-label">Active Patients</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon green"><CheckCircle size={24} /></div>
+          <div className="stat-info">
+            <span className="stat-value">{overview.recentCheckIns || 0}</span>
+            <span className="stat-label">Check-Ins (7d)</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon red"><AlertTriangle size={24} /></div>
+          <div className="stat-info">
+            <span className="stat-value">{alertCounts.critical || 0}</span>
+            <span className="stat-label">Critical Alerts</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon orange"><Activity size={24} /></div>
+          <div className="stat-info">
+            <span className="stat-value">{alertCounts.warning || 0}</span>
+            <span className="stat-label">Warnings</span>
+          </div>
+        </div>
       </div>
 
-      <div className="content-grid">
-        <div className="card risk-distribution-card">
-          <h3 className="card-title"><Activity size={20} />Risk Distribution</h3>
+      <div className="dashboard-grid">
+        <div className="card">
+          <h3 className="card-title">Risk Distribution</h3>
           <div className="risk-bars">
-            <RiskBar label="Critical" count={riskCounts.critical || 0} color="var(--red)" />
-            <RiskBar label="Elevated" count={riskCounts.elevated || 0} color="var(--orange)" />
-            <RiskBar label="Moderate" count={riskCounts.moderate || 0} color="var(--yellow)" />
-            <RiskBar label="Routine" count={riskCounts.routine || 0} color="var(--green)" />
-          </div>
-        </div>
-
-        <div className="card trends-card">
-          <h3 className="card-title"><TrendingUp size={20} />Weekly Trend</h3>
-          {overview.dailyTrends.length > 0 ? (
-            <div className="trend-list">
-              {overview.dailyTrends.slice(0, 7).map((day) => (
-                <div key={day.date} className="trend-item">
-                  <span className="trend-date">{new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                  <span className="trend-count">{day.check_ins} check-ins</span>
-                  <span className={`trend-risk ${day.high_risk_count > 0 ? 'high' : 'low'}`}>{day.high_risk_count} alerts</span>
+            {['critical', 'elevated', 'moderate', 'routine'].map(level => (
+              <div key={level} className="risk-bar-row">
+                <span className={`risk-label ${level}`}>{level}</span>
+                <div className="risk-bar-track">
+                  <div
+                    className={`risk-bar-fill ${level}`}
+                    style={{ width: `${((riskCounts[level] || 0) / (overview.totalPatients || 1)) * 100}%` }}
+                  />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="empty-state">No check-ins in the selected period</p>
-          )}
+                <span className="risk-count">{riskCounts[level] || 0}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 className="card-title">Quick Actions</h3>
+          <div className="quick-actions">
+            <Link to="/triage" className="action-link">
+              <AlertCircle size={20} />
+              <span>View Triage Queue</span>
+              <ChevronRight size={16} />
+            </Link>
+            <Link to="/patients" className="action-link">
+              <Users size={20} />
+              <span>Patient Directory</span>
+              <ChevronRight size={16} />
+            </Link>
+            <Link to="/check-in" className="action-link">
+              <CheckCircle size={20} />
+              <span>Submit Check-In</span>
+              <ChevronRight size={16} />
+            </Link>
+            <Link to="/new-patient" className="action-link">
+              <UserPlus size={20} />
+              <span>Add New Patient</span>
+              <ChevronRight size={16} />
+            </Link>
+          </div>
         </div>
       </div>
-
-      <div className="quick-actions">
-        <Link to="/triage" className="quick-action-card urgent">
-          <Bell size={24} />
-          <div>
-            <h4>View Triage Queue</h4>
-            <p>{(alertCounts.critical || 0) + (alertCounts.elevated || 0)} pending alerts</p>
-          </div>
-          <ChevronRight size={20} />
-        </Link>
-        <Link to="/check-in" className="quick-action-card">
-          <CheckCircle size={24} />
-          <div>
-            <h4>Submit Check-In</h4>
-            <p>Record new patient status</p>
-          </div>
-          <ChevronRight size={20} />
-        </Link>
-      </div>
     </div>
   );
 }
 
-function StatCard({ title, value, icon: Icon, trend, color }) {
-  return (
-    <div className={`stat-card stat-${color}`}>
-      <div className="stat-icon"><Icon size={24} /></div>
-      <div className="stat-content">
-        <p className="stat-label">{title}</p>
-        <p className="stat-value">{value}</p>
-        <p className="stat-trend">{trend}</p>
-      </div>
-    </div>
-  );
-}
-
-function RiskBar({ label, count, color }) {
-  const percentage = Math.min((count / 20) * 100, 100);
-  return (
-    <div className="risk-bar">
-      <div className="risk-bar-header">
-        <span className="risk-bar-label">{label}</span>
-        <span className="risk-bar-count">{count}</span>
-      </div>
-      <div className="risk-bar-track">
-        <div className="risk-bar-fill" style={{ width: `${percentage}%`, backgroundColor: color }} />
-      </div>
-    </div>
-  );
-}
-
+// ==================== TRIAGE QUEUE ====================
 function TriageQueue() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -235,104 +228,69 @@ function TriageQueue() {
   useEffect(() => {
     fetch(`${API_URL}/api/agencies/${DEMO_AGENCY_ID}/triage-queue`)
       .then(res => res.json())
-      .then(data => { setAlerts(data); setLoading(false); })
-      .catch(err => { console.error('Failed to load triage queue:', err); setLoading(false); });
+      .then(data => {
+        setAlerts(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load triage queue:', err);
+        setLoading(false);
+      });
   }, []);
 
-  const acknowledgeAlert = (alertId) => {
-    fetch(`${API_URL}/api/alerts/${alertId}/acknowledge`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ assignedTo: 'Sarah Johnson' })
-    }).then(() => setAlerts(alerts.filter(a => a.id !== alertId)))
-      .catch(err => console.error('Failed to acknowledge alert:', err));
-  };
-
   if (loading) return <div className="loading">Loading triage queue...</div>;
-
-  const criticalAlerts = alerts.filter(a => a.severity === 'critical');
-  const elevatedAlerts = alerts.filter(a => a.severity === 'elevated');
 
   return (
     <div className="triage-queue">
       <header className="page-header">
         <div>
           <h1 className="page-title">Triage Queue</h1>
-          <p className="page-subtitle">{alerts.length} alerts requiring attention</p>
+          <p className="page-subtitle">{alerts.length} pending alert{alerts.length !== 1 ? 's' : ''}</p>
         </div>
       </header>
 
-      {criticalAlerts.length > 0 && (
-        <section className="alert-section">
-          <h2 className="section-title critical"><AlertCircle size={20} />Critical Alerts ({criticalAlerts.length})</h2>
-          <div className="alert-list">
-            {criticalAlerts.map(alert => <AlertCard key={alert.id} alert={alert} onAcknowledge={acknowledgeAlert} />)}
-          </div>
-        </section>
-      )}
-
-      {elevatedAlerts.length > 0 && (
-        <section className="alert-section">
-          <h2 className="section-title elevated"><AlertTriangle size={20} />Elevated Risk ({elevatedAlerts.length})</h2>
-          <div className="alert-list">
-            {elevatedAlerts.map(alert => <AlertCard key={alert.id} alert={alert} onAcknowledge={acknowledgeAlert} />)}
-          </div>
-        </section>
-      )}
-
-      {alerts.length === 0 && (
-        <div className="empty-state-large">
+      {alerts.length === 0 ? (
+        <div className="empty-state">
           <CheckCircle size={64} />
-          <h3>All Clear!</h3>
-          <p>No pending alerts at this time.</p>
+          <h2>All Clear</h2>
+          <p>No pending alerts. All patients are stable.</p>
         </div>
-      )}
-    </div>
-  );
-}
-
-function AlertCard({ alert, onAcknowledge }) {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <div className={`alert-card severity-${alert.severity}`}>
-      <div className="alert-header">
-        <div className="alert-patient">
-          <Heart size={20} />
-          <div>
-            <h4>{alert.first_name} {alert.last_name}</h4>
-            <p className="alert-time"><Clock size={14} />{new Date(alert.check_in_time).toLocaleString()}</p>
-          </div>
-        </div>
-        <button className="btn-expand" onClick={() => setExpanded(!expanded)}>
-          {expanded ? 'Hide' : 'View'} Details
-        </button>
-      </div>
-      <div className="alert-body">
-        <p className="alert-description">{alert.description}</p>
-        <div className="alert-action"><strong>Action needed:</strong> {alert.action_needed}</div>
-      </div>
-      {expanded && (
-        <div className="alert-details">
-          {alert.call_script && (
-            <div className="detail-section">
-              <h5>Call Script</h5>
-              <p className="call-script">{alert.call_script}</p>
+      ) : (
+        <div className="alerts-list">
+          {alerts.map((alert) => (
+            <div key={alert.id} className={`alert-card ${alert.severity}`}>
+              <div className="alert-header">
+                <div className="alert-patient">
+                  <span className={`severity-dot ${alert.severity}`} />
+                  <h3>{alert.patient_name}</h3>
+                  <span className={`risk-badge ${alert.severity}`}>{alert.severity}</span>
+                </div>
+                <span className="alert-time">
+                  <Clock size={14} />
+                  {new Date(alert.created_at).toLocaleString()}
+                </span>
+              </div>
+              <p className="alert-description">{alert.description}</p>
+              {alert.ai_call_script && (
+                <div className="call-script">
+                  <h4><Phone size={16} /> Suggested Call Script</h4>
+                  <p>{alert.ai_call_script}</p>
+                </div>
+              )}
+              <div className="alert-actions">
+                <Link to={`/patients/${alert.patient_id}`} className="btn-secondary">
+                  View Details
+                </Link>
+              </div>
             </div>
-          )}
-          <div className="detail-section">
-            <h5>Contact Information</h5>
-            <div className="contact-info"><Phone size={16} /><span>{alert.caregiver_name}: {alert.caregiver_phone}</span></div>
-          </div>
+          ))}
         </div>
       )}
-      <div className="alert-footer">
-        <button className="btn-primary" onClick={() => onAcknowledge(alert.id)}>Acknowledge & Assign to Me</button>
-        <Link to={`/patients/${alert.patient_id}`} className="btn-secondary">View Patient Record</Link>
-      </div>
     </div>
   );
 }
 
+// ==================== PATIENT LIST ====================
 function PatientList() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -340,46 +298,62 @@ function PatientList() {
   useEffect(() => {
     fetch(`${API_URL}/api/agencies/${DEMO_AGENCY_ID}/patients`)
       .then(res => res.json())
-      .then(data => { setPatients(data); setLoading(false); })
-      .catch(err => { console.error('Failed to load patients:', err); setLoading(false); });
+      .then(data => {
+        setPatients(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load patients:', err);
+        setLoading(false);
+      });
   }, []);
 
   if (loading) return <div className="loading">Loading patients...</div>;
 
-  const riskOrder = { critical: 0, elevated: 1, moderate: 2, routine: 3 };
-  const sortedPatients = [...patients].sort((a, b) => riskOrder[a.risk_level] - riskOrder[b.risk_level]);
-
   return (
-    <div className="patient-list-page">
+    <div className="patient-list">
       <header className="page-header">
         <div>
           <h1 className="page-title">Patient Directory</h1>
-          <p className="page-subtitle">{patients.length} active patients</p>
+          <p className="page-subtitle">{patients.length} active patient{patients.length !== 1 ? 's' : ''}</p>
         </div>
+        <Link to="/new-patient" className="btn-primary">
+          <UserPlus size={18} />
+          Add Patient
+        </Link>
       </header>
+
       <div className="patient-grid">
-        {sortedPatients.map(patient => (
-          <Link key={patient.id} to={`/patients/${patient.id}`} className={`patient-card risk-${patient.risk_level}`}>
-            <div className="patient-header">
-              <div className="patient-avatar">{patient.first_name[0]}{patient.last_name[0]}</div>
-              <div className="patient-info">
-                <h3>{patient.first_name} {patient.last_name}</h3>
-                <span className={`risk-badge ${patient.risk_level}`}>{patient.risk_level}</span>
+        {patients.map((patient) => (
+          <Link key={patient.id} to={`/patients/${patient.id}`} className="patient-card">
+            <div className="patient-card-header">
+              <div className="patient-avatar">
+                {patient.first_name?.[0]}{patient.last_name?.[0]}
+              </div>
+              <div>
+                <h3 className="patient-name">{patient.first_name} {patient.last_name}</h3>
+                <span className={`risk-badge ${patient.risk_level || 'routine'}`}>
+                  {patient.risk_level || 'routine'} risk
+                </span>
               </div>
             </div>
-            <div className="patient-stats">
-              <div className="patient-stat"><CheckCircle size={16} /><span>{patient.total_check_ins} check-ins</span></div>
-              {patient.last_check_in && (
-                <div className="patient-stat"><Clock size={16} /><span>Last: {new Date(patient.last_check_in).toLocaleDateString()}</span></div>
+            <div className="patient-card-body">
+              {patient.medical_conditions && (
+                <div className="patient-conditions">
+                  {(Array.isArray(patient.medical_conditions) ? patient.medical_conditions : []).slice(0, 3).map((c, i) => (
+                    <span key={i} className="condition-tag">{c}</span>
+                  ))}
+                </div>
               )}
+              <div className="patient-meta">
+                <span><Calendar size={14} /> DOB: {new Date(patient.date_of_birth).toLocaleDateString()}</span>
+                {patient.caregiver_name && (
+                  <span><Heart size={14} /> {patient.caregiver_name}</span>
+                )}
+              </div>
             </div>
-            <div className="patient-conditions">
-              {patient.medical_conditions?.slice(0, 2).map((condition, i) => (
-                <span key={i} className="condition-tag">{condition}</span>
-              ))}
-              {patient.medical_conditions?.length > 2 && (
-                <span className="condition-tag">+{patient.medical_conditions.length - 2} more</span>
-              )}
+            <div className="patient-card-footer">
+              <span>View Details <ChevronRight size={16} /></span>
             </div>
           </Link>
         ))}
@@ -388,6 +362,7 @@ function PatientList() {
   );
 }
 
+// ==================== PATIENT DETAIL ====================
 function PatientDetail() {
   const { id } = useParams();
   const [patient, setPatient] = useState(null);
@@ -398,9 +373,16 @@ function PatientDetail() {
     Promise.all([
       fetch(`${API_URL}/api/patients/${id}`).then(r => r.json()),
       fetch(`${API_URL}/api/patients/${id}/check-ins?limit=10`).then(r => r.json())
-    ]).then(([patientData, checkInsData]) => {
-      setPatient(patientData); setCheckIns(checkInsData); setLoading(false);
-    }).catch(err => { console.error('Failed to load patient:', err); setLoading(false); });
+    ])
+      .then(([patientData, checkInsData]) => {
+        setPatient(patientData);
+        setCheckIns(Array.isArray(checkInsData) ? checkInsData : []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load patient:', err);
+        setLoading(false);
+      });
   }, [id]);
 
   if (loading) return <div className="loading">Loading patient details...</div>;
@@ -410,121 +392,203 @@ function PatientDetail() {
     <div className="patient-detail">
       <header className="page-header">
         <div>
-          <h1 className="page-title">{patient.first_name} {patient.last_name}</h1>
-          <span className={`risk-badge large ${patient.risk_level}`}>{patient.risk_level} risk</span>
+          <h1 className="page-title">
+            {patient.first_name} {patient.last_name}
+          </h1>
+          <span className={`risk-badge large ${patient.risk_level || 'routine'}`}>
+            {patient.risk_level || 'routine'} risk
+          </span>
         </div>
-        <Link to="/check-in" className="btn-primary"><CheckCircle size={18} />New Check-In</Link>
+        <Link to="/check-in" className="btn-primary">
+          <CheckCircle size={18} />
+          New Check-In
+        </Link>
       </header>
+
       <div className="patient-detail-grid">
         <div className="card patient-info-card">
           <h3 className="card-title">Patient Information</h3>
           <div className="info-grid">
-            <div className="info-item"><span className="info-label">Date of Birth</span><span className="info-value">{new Date(patient.date_of_birth).toLocaleDateString()}</span></div>
-            <div className="info-item"><span className="info-label">Caregiver</span><span className="info-value">{patient.caregiver_name}</span></div>
-            <div className="info-item"><span className="info-label">Phone</span><span className="info-value">{patient.caregiver_phone}</span></div>
-          </div>
-          <div className="info-section">
-            <h4>Medical Conditions</h4>
-            <div className="tag-list">
-              {patient.medical_conditions?.map((condition, i) => <span key={i} className="tag">{condition}</span>)}
+            <div className="info-item">
+              <span className="info-label">Date of Birth</span>
+              <span className="info-value">
+                {new Date(patient.date_of_birth).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Caregiver</span>
+              <span className="info-value">{patient.caregiver_name || 'Not assigned'}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Caregiver Phone</span>
+              <span className="info-value">{patient.caregiver_phone || 'N/A'}</span>
             </div>
           </div>
-          <div className="info-section">
-            <h4>Current Medications</h4>
-            <ul className="medication-list">
-              {patient.medications?.map((med, i) => <li key={i}>{med}</li>)}
-            </ul>
-          </div>
         </div>
-        <div className="card check-in-history-card">
-          <h3 className="card-title">Recent Check-Ins</h3>
-          <div className="check-in-list">
-            {checkIns.map(checkIn => (
-              <div key={checkIn.id} className="check-in-item">
-                <div className="check-in-header">
-                  <span className="check-in-date">{new Date(checkIn.submitted_at).toLocaleDateString()}</span>
-                  <span className={`risk-badge small ${checkIn.risk_level}`}>Risk: {checkIn.score}</span>
-                </div>
-                <div className="check-in-details">
-                  <div className="detail"><strong>Pain:</strong> {checkIn.pain_level}/10{checkIn.pain_location && ` (${checkIn.pain_location})`}</div>
-                  <div className="detail"><strong>Medications:</strong> {checkIn.medications_taken ? '✓ Taken' : '✗ Missed'}</div>
-                  {checkIn.risk_factors?.length > 0 && (
-                    <div className="risk-factors">
-                      <strong>Concerns:</strong>
-                      <ul>{checkIn.risk_factors.slice(0, 3).map((factor, i) => <li key={i}>{factor}</li>)}</ul>
-                    </div>
-                  )}
-                </div>
-              </div>
+
+        <div className="card">
+          <h3 className="card-title">Medical Conditions</h3>
+          <div className="tags-list">
+            {(Array.isArray(patient.medical_conditions) ? patient.medical_conditions : []).map((c, i) => (
+              <span key={i} className="condition-tag">{c}</span>
             ))}
           </div>
+        </div>
+
+        <div className="card">
+          <h3 className="card-title">Medications</h3>
+          <div className="tags-list">
+            {(Array.isArray(patient.medications) ? patient.medications : []).map((m, i) => (
+              <span key={i} className="med-tag">{m}</span>
+            ))}
+          </div>
+        </div>
+
+        <div className="card full-width">
+          <h3 className="card-title">Recent Check-Ins</h3>
+          {checkIns.length === 0 ? (
+            <p className="empty-message">No check-ins recorded yet.</p>
+          ) : (
+            <div className="check-in-history">
+              {checkIns.map((ci) => (
+                <div key={ci.id} className="check-in-item">
+                  <div className="check-in-meta">
+                    <span className="check-in-date">
+                      <Calendar size={14} />
+                      {new Date(ci.submitted_at).toLocaleString()}
+                    </span>
+                    <span className="check-in-by">by {ci.submitted_by}</span>
+                    {ci.risk_score && (
+                      <span className={`risk-badge ${ci.risk_level || 'routine'}`}>
+                        Score: {ci.risk_score}
+                      </span>
+                    )}
+                  </div>
+                  {ci.ai_summary && (
+                    <p className="check-in-summary">{ci.ai_summary}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
+// ==================== CHECK-IN FORM ====================
 function CheckInForm() {
   const [patients, setPatients] = useState([]);
-  const [formData, setFormData] = useState({
-    patientId: '', submittedBy: '', painLevel: 0, painLocation: '',
-    mobilityStatus: 'walking_normally', appetite: 'good', sleepQuality: 'good',
-    mood: 'content', medicationsTaken: true, missedMedications: '',
-    temperature: '', bloodPressure: '', heartRate: '', newSymptoms: '',
-    fallIncident: false, catheterConcerns: false, woundConcerns: false, additionalNotes: ''
-  });
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [formData, setFormData] = useState({
+    patientId: '',
+    submittedBy: '',
+    painLevel: 0,
+    painLocation: '',
+    mobilityStatus: 'independent',
+    moodStatus: 'normal',
+    medicationsTaken: true,
+    missedMedications: '',
+    temperature: '',
+    bloodPressure: '',
+    heartRate: '',
+    newSymptoms: '',
+    fallIncident: false,
+    catheterConcerns: false,
+    woundConcerns: false,
+    additionalNotes: ''
+  });
 
   useEffect(() => {
     fetch(`${API_URL}/api/agencies/${DEMO_AGENCY_ID}/patients`)
       .then(res => res.json())
-      .then(setPatients)
+      .then(data => setPatients(data))
       .catch(err => console.error('Failed to load patients:', err));
   }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setSubmitting(true);
+
     const submitData = {
-      ...formData,
-      missedMedications: formData.missedMedications ? formData.missedMedications.split(',').map(m => m.trim()) : null,
-      newSymptoms: formData.newSymptoms ? formData.newSymptoms.split(',').map(s => s.trim()) : null,
+      patientId: formData.patientId,
+      submittedBy: formData.submittedBy,
+      painLevel: formData.painLevel,
+      painLocation: formData.painLocation || null,
+      mobilityStatus: formData.mobilityStatus,
+      moodStatus: formData.moodStatus,
+      medicationsTaken: formData.medicationsTaken,
+      missedMedications: !formData.medicationsTaken && formData.missedMedications
+        ? formData.missedMedications.split(',').map(m => m.trim())
+        : null,
+      newSymptoms: formData.newSymptoms
+        ? formData.newSymptoms.split(',').map(s => s.trim())
+        : null,
       temperature: formData.temperature ? parseFloat(formData.temperature) : null,
-      heartRate: formData.heartRate ? parseInt(formData.heartRate) : null
+      bloodPressure: formData.bloodPressure || null,
+      heartRate: formData.heartRate ? parseInt(formData.heartRate) : null,
+      fallIncident: formData.fallIncident,
+      catheterConcerns: formData.catheterConcerns,
+      woundConcerns: formData.woundConcerns,
+      additionalNotes: formData.additionalNotes || null
     };
+
     fetch(`${API_URL}/api/check-ins`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(submitData)
-    }).then(res => res.json())
-      .then(data => { setResult(data); setSubmitting(false); })
-      .catch(err => { console.error('Failed to submit check-in:', err); setSubmitting(false); });
+    })
+      .then(res => res.json())
+      .then(data => {
+        setResult(data);
+        setSubmitting(false);
+      })
+      .catch(err => {
+        console.error('Failed to submit check-in:', err);
+        setSubmitting(false);
+      });
   };
 
   if (result) {
     return (
       <div className="check-in-result">
-        <div className={`result-card ${result.riskScore.level}`}>
+        <div className={`result-card ${result.riskScore?.level || 'routine'}`}>
           <CheckCircle size={64} />
           <h2>Check-In Recorded</h2>
           <p className="result-message">{result.message}</p>
+
           <div className="result-details">
             <h3>Risk Assessment</h3>
             <div className="risk-score">
-              <span className="score-value">{result.riskScore.score}/100</span>
-              <span className={`risk-badge large ${result.riskScore.level}`}>{result.riskScore.level}</span>
+              <span className="score-value">{result.riskScore?.score || 0}/100</span>
+              <span className={`risk-badge large ${result.riskScore?.level || 'routine'}`}>
+                {result.riskScore?.level || 'routine'}
+              </span>
             </div>
-            {result.riskScore.factors.length > 0 && (
+
+            {result.riskScore?.factors?.length > 0 && (
               <div className="risk-factors">
                 <h4>Detected Factors:</h4>
-                <ul>{result.riskScore.factors.map((factor, i) => <li key={i}>{factor}</li>)}</ul>
+                <ul>
+                  {result.riskScore.factors.map((factor, i) => (
+                    <li key={i}>{factor}</li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
+
           <div className="result-actions">
-            <button className="btn-primary" onClick={() => setResult(null)}>Submit Another Check-In</button>
-            {result.alert && <Link to="/triage" className="btn-secondary">View in Triage Queue</Link>}
+            <button className="btn-primary" onClick={() => setResult(null)}>
+              Submit Another Check-In
+            </button>
+            {result.alert && (
+              <Link to="/triage" className="btn-secondary">
+                View in Triage Queue
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -539,6 +603,7 @@ function CheckInForm() {
           <p className="page-subtitle">Record patient status and concerns</p>
         </div>
       </header>
+
       <form className="check-in-form" onSubmit={handleSubmit}>
         <div className="form-section">
           <h3>Patient Information</h3>
@@ -547,7 +612,9 @@ function CheckInForm() {
               <label>Patient *</label>
               <select value={formData.patientId} onChange={e => setFormData({...formData, patientId: e.target.value})} required>
                 <option value="">Select patient...</option>
-                {patients.map(p => <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>)}
+                {patients.map(p => (
+                  <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>
+                ))}
               </select>
             </div>
             <div className="form-group">
@@ -558,7 +625,7 @@ function CheckInForm() {
         </div>
 
         <div className="form-section">
-          <h3>Pain & Comfort</h3>
+          <h3>Pain &amp; Comfort</h3>
           <div className="form-group">
             <label>Pain Level: {formData.painLevel}/10</label>
             <input type="range" min="0" max="10" value={formData.painLevel} onChange={e => setFormData({...formData, painLevel: parseInt(e.target.value)})} className="pain-slider" />
@@ -572,46 +639,23 @@ function CheckInForm() {
         </div>
 
         <div className="form-section">
-          <h3>Daily Status</h3>
+          <h3>Mobility &amp; Mood</h3>
           <div className="form-row">
             <div className="form-group">
-              <label>Mobility</label>
+              <label>Mobility Status</label>
               <select value={formData.mobilityStatus} onChange={e => setFormData({...formData, mobilityStatus: e.target.value})}>
-                <option value="walking_normally">Walking normally</option>
-                <option value="walking_slowly">Walking slowly</option>
-                <option value="walking_with_aid">Walking with aid</option>
-                <option value="limited">Limited mobility</option>
-                <option value="unable_to_walk">Unable to walk</option>
+                <option value="independent">Independent</option>
+                <option value="assisted">Needs Assistance</option>
+                <option value="limited">Limited Mobility</option>
                 <option value="bedbound">Bedbound</option>
               </select>
             </div>
             <div className="form-group">
-              <label>Appetite</label>
-              <select value={formData.appetite} onChange={e => setFormData({...formData, appetite: e.target.value})}>
-                <option value="good">Good</option>
-                <option value="fair">Fair</option>
-                <option value="poor">Poor</option>
-                <option value="none">No appetite</option>
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Sleep Quality</label>
-              <select value={formData.sleepQuality} onChange={e => setFormData({...formData, sleepQuality: e.target.value})}>
-                <option value="good">Good</option>
-                <option value="fair">Fair</option>
-                <option value="poor">Poor/Restless</option>
-                <option value="none">Unable to sleep</option>
-              </select>
-            </div>
-            <div className="form-group">
               <label>Mood</label>
-              <select value={formData.mood} onChange={e => setFormData({...formData, mood: e.target.value})}>
-                <option value="content">Content</option>
-                <option value="okay">Okay</option>
-                <option value="tired">Tired</option>
+              <select value={formData.moodStatus} onChange={e => setFormData({...formData, moodStatus: e.target.value})}>
+                <option value="normal">Normal / Stable</option>
                 <option value="anxious">Anxious</option>
+                <option value="agitated">Agitated</option>
                 <option value="confused">Confused</option>
                 <option value="depressed">Depressed</option>
                 <option value="distressed">Distressed</option>
@@ -661,9 +705,18 @@ function CheckInForm() {
             <input type="text" value={formData.newSymptoms} onChange={e => setFormData({...formData, newSymptoms: e.target.value})} placeholder="e.g., shortness of breath, swelling, dizziness" />
           </div>
           <div className="checkbox-grid">
-            <label className="checkbox-label"><input type="checkbox" checked={formData.fallIncident} onChange={e => setFormData({...formData, fallIncident: e.target.checked})} />Fall incident</label>
-            <label className="checkbox-label"><input type="checkbox" checked={formData.catheterConcerns} onChange={e => setFormData({...formData, catheterConcerns: e.target.checked})} />Catheter concerns</label>
-            <label className="checkbox-label"><input type="checkbox" checked={formData.woundConcerns} onChange={e => setFormData({...formData, woundConcerns: e.target.checked})} />Wound concerns</label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={formData.fallIncident} onChange={e => setFormData({...formData, fallIncident: e.target.checked})} />
+              Fall incident
+            </label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={formData.catheterConcerns} onChange={e => setFormData({...formData, catheterConcerns: e.target.checked})} />
+              Catheter concerns
+            </label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={formData.woundConcerns} onChange={e => setFormData({...formData, woundConcerns: e.target.checked})} />
+              Wound concerns
+            </label>
           </div>
         </div>
 
@@ -677,6 +730,156 @@ function CheckInForm() {
         <div className="form-actions">
           <button type="submit" className="btn-primary btn-large" disabled={submitting}>
             {submitting ? 'Submitting...' : 'Submit Check-In'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ==================== NEW PATIENT FORM ====================
+function NewPatientForm() {
+  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    medicalConditions: '',
+    medications: '',
+    caregiverName: '',
+    caregiverPhone: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+
+    const payload = {
+      agencyId: DEMO_AGENCY_ID,
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
+      dateOfBirth: formData.dateOfBirth,
+      medicalConditions: formData.medicalConditions
+        ? formData.medicalConditions.split(',').map(c => c.trim()).filter(Boolean)
+        : [],
+      medications: formData.medications
+        ? formData.medications.split(',').map(m => m.trim()).filter(Boolean)
+        : [],
+      caregiverName: formData.caregiverName.trim() || null,
+      caregiverPhone: formData.caregiverPhone.trim() || null
+    };
+
+    fetch(`${API_URL}/api/patients`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        setSubmitting(false);
+        setSuccess(data);
+      })
+      .catch(err => {
+        console.error('Failed to add patient:', err);
+        setError(err.message || 'Failed to add patient. Please try again.');
+        setSubmitting(false);
+      });
+  };
+
+  if (success) {
+    return (
+      <div className="check-in-result">
+        <div className="result-card routine">
+          <CheckCircle size={64} />
+          <h2>Patient Added Successfully</h2>
+          <p className="result-message">
+            {success.first_name || formData.firstName} {success.last_name || formData.lastName} has been added to your patient directory.
+          </p>
+          <div className="result-actions">
+            <button className="btn-primary" onClick={() => { setSuccess(null); setFormData({ firstName: '', lastName: '', dateOfBirth: '', medicalConditions: '', medications: '', caregiverName: '', caregiverPhone: '' }); }}>
+              Add Another Patient
+            </button>
+            <Link to="/patients" className="btn-secondary">
+              View Patient Directory
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="check-in-form-page">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Add New Patient</h1>
+          <p className="page-subtitle">Register a new patient for monitoring</p>
+        </div>
+      </header>
+
+      {error && (
+        <div className="error-banner">
+          <AlertTriangle size={18} />
+          <span>{error}</span>
+          <button onClick={() => setError(null)}>&times;</button>
+        </div>
+      )}
+
+      <form className="check-in-form" onSubmit={handleSubmit}>
+        <div className="form-section">
+          <h3>Patient Information</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label>First Name *</label>
+              <input type="text" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} placeholder="e.g., Margaret" required />
+            </div>
+            <div className="form-group">
+              <label>Last Name *</label>
+              <input type="text" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} placeholder="e.g., Chen" required />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Date of Birth *</label>
+            <input type="date" value={formData.dateOfBirth} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} required />
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h3>Medical Information</h3>
+          <div className="form-group">
+            <label>Medical Conditions (comma-separated)</label>
+            <input type="text" value={formData.medicalConditions} onChange={e => setFormData({...formData, medicalConditions: e.target.value})} placeholder="e.g., Type 2 Diabetes, Hypertension, Arthritis" />
+          </div>
+          <div className="form-group">
+            <label>Medications (comma-separated)</label>
+            <input type="text" value={formData.medications} onChange={e => setFormData({...formData, medications: e.target.value})} placeholder="e.g., Metformin 500mg, Lisinopril 10mg, Aspirin 81mg" />
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h3>Caregiver Information</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Caregiver Name</label>
+              <input type="text" value={formData.caregiverName} onChange={e => setFormData({...formData, caregiverName: e.target.value})} placeholder="e.g., Lisa Chen" />
+            </div>
+            <div className="form-group">
+              <label>Caregiver Phone</label>
+              <input type="tel" value={formData.caregiverPhone} onChange={e => setFormData({...formData, caregiverPhone: e.target.value})} placeholder="e.g., 555-0123" />
+            </div>
+          </div>
+        </div>
+
+        <div className="form-actions">
+          <button type="submit" className="btn-primary btn-large" disabled={submitting}>
+            {submitting ? 'Adding Patient...' : 'Add Patient'}
           </button>
         </div>
       </form>
