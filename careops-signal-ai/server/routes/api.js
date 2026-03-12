@@ -76,14 +76,10 @@ router.post('/patients', async (req, res) => {
     const first_name = body.first_name || body.firstName;
     const last_name = body.last_name || body.lastName;
     const date_of_birth = body.date_of_birth || body.dateOfBirth || null;
-    const phone = body.phone || null;
-    const address = body.address || null;
-    const emergency_contact_name = body.emergency_contact_name || body.emergencyContactName || body.caregiverName || null;
-    const emergency_contact_phone = body.emergency_contact_phone || body.emergencyContactPhone || body.caregiverPhone || null;
     const medical_conditions = body.medical_conditions || body.medicalConditions || [];
     const medications = body.medications || [];
-    const primary_diagnosis = body.primary_diagnosis || body.primaryDiagnosis || null;
-    const notes = body.notes || null;
+    const caregiver_name = body.caregiver_name || body.caregiverName || null;
+    const caregiver_phone = body.caregiver_phone || body.caregiverPhone || null;
 
     // Validate required fields
     if (!agency_id || !first_name || !last_name) {
@@ -92,35 +88,31 @@ router.post('/patients', async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO patients (
-        agency_id, first_name, last_name, date_of_birth, phone, address,
-        emergency_contact_name, emergency_contact_phone,
-        medical_conditions, medications, primary_diagnosis, notes,
-        status, current_risk_level, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+        agency_id, first_name, last_name, date_of_birth,
+        medical_conditions, medications,
+        caregiver_name, caregiver_phone,
+        status, risk_level, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
       RETURNING *`,
       [
         agency_id,
         first_name,
         last_name,
         date_of_birth,
-        phone,
-        address,
-        emergency_contact_name,
-        emergency_contact_phone,
         JSON.stringify(medical_conditions),
         JSON.stringify(medications),
-        primary_diagnosis,
-        notes,
+        caregiver_name,
+        caregiver_phone,
         'active',
-        'low'
+        'routine'
       ]
     );
 
     console.log(`New patient created: ${first_name} ${last_name} (${result.rows[0].id})`);
-    res.status(201).json({ patient: result.rows[0] });
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error creating patient:', error);
-    res.status(500).json({ error: 'Failed to create patient' });
+    res.status(500).json({ error: 'Failed to create patient: ' + error.message });
   }
 });
 
