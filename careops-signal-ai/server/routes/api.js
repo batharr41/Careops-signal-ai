@@ -76,10 +76,14 @@ router.post('/patients', async (req, res) => {
     const first_name = body.first_name || body.firstName;
     const last_name = body.last_name || body.lastName;
     const date_of_birth = body.date_of_birth || body.dateOfBirth || null;
-    const medical_conditions = body.medical_conditions || body.medicalConditions || [];
-    const medications = body.medications || [];
     const caregiver_name = body.caregiver_name || body.caregiverName || null;
     const caregiver_phone = body.caregiver_phone || body.caregiverPhone || null;
+
+    // Convert arrays — these are text[] columns in Postgres, not jsonb
+    const rawConditions = body.medical_conditions || body.medicalConditions || [];
+    const rawMedications = body.medications || [];
+    const medical_conditions = Array.isArray(rawConditions) ? rawConditions : [];
+    const medications = Array.isArray(rawMedications) ? rawMedications : [];
 
     // Validate required fields
     if (!agency_id || !first_name || !last_name) {
@@ -91,19 +95,18 @@ router.post('/patients', async (req, res) => {
         agency_id, first_name, last_name, date_of_birth,
         medical_conditions, medications,
         caregiver_name, caregiver_phone,
-        status, risk_level, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        risk_level
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *`,
       [
         agency_id,
         first_name,
         last_name,
         date_of_birth,
-        JSON.stringify(medical_conditions),
-        JSON.stringify(medications),
+        medical_conditions,
+        medications,
         caregiver_name,
         caregiver_phone,
-        'active',
         'routine'
       ]
     );
