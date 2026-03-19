@@ -1267,3 +1267,15 @@ body {
     gap: var(--space-sm);
   }
 }
+
+/* Fix pain slider gradient visibility */
+.pain-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 12px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(to right, #16a34a 0%, #eab308 50%, #dc2626 100%);
+  outline: none;
+  width: 100%;
+}
