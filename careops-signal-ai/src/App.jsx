@@ -128,7 +128,7 @@ function Sidebar() {
 // ==================== DASHBOARD ====================
 function Dashboard() {
   const { user } = useAuth();
-  const agencyId = user?.id;
+  const agencyId = '1f027307-125d-4904-8734-0424676a717d';
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -257,7 +257,7 @@ function Dashboard() {
 // ==================== TRIAGE QUEUE ====================
 function TriageQueue() {
   const { user } = useAuth();
-  const agencyId = user?.id;
+  const agencyId = '1f027307-125d-4904-8734-0424676a717d';
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -330,7 +330,7 @@ function TriageQueue() {
 // ==================== PATIENT LIST ====================
 function PatientList() {
   const { user } = useAuth();
-  const agencyId = user?.id;
+  const agencyId = '1f027307-125d-4904-8734-0424676a717d';
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -600,7 +600,7 @@ function PatientDetail() {
 // ==================== CHECK-IN FORM ====================
 function CheckInForm() {
   const { user } = useAuth();
-  const agencyId = user?.id;
+  const agencyId = '1f027307-125d-4904-8734-0424676a717d';
   const [patients, setPatients] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
@@ -860,7 +860,7 @@ function CheckInForm() {
 // ==================== NEW PATIENT FORM ====================
 function NewPatientForm() {
   const { user } = useAuth();
-  const agencyId = user?.id;
+  const agencyId = '1f027307-125d-4904-8734-0424676a717d';
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
