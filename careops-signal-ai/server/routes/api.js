@@ -2,6 +2,7 @@ import express from 'express';
 import checkInController from '../controllers/checkInController.js';
 import dashboardController from '../controllers/dashboardController.js';
 import pool from '../database/pool.js';
+import { authenticateJWT } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -9,6 +10,7 @@ const router = express.Router();
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+router.use(authenticateJWT);
 
 // Check-in routes
 router.post('/check-ins', checkInController.submitCheckIn);
