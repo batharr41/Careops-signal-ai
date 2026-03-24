@@ -8,8 +8,19 @@ import {
 import './App.css';
 import { AuthProvider, useAuth } from './AuthContext';
 import Login from './Login';
+import { supabase } from './supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
+
+// Helper: builds headers with Supabase JWT for authenticated API calls
+async function authFetch(url, options = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers = {
+    ...options.headers,
+    Authorization: `Bearer ${session?.access_token}`,
+  };
+  return fetch(url, { ...options, headers });
+}
 
 // BetweenVisits logo SVG component
 function BetweenVisitsIcon({ size = 40 }) {
@@ -134,7 +145,7 @@ function Dashboard() {
 
   useEffect(() => {
     if (!agencyId) return;
-    fetch(`${API_URL}/api/agencies/${agencyId}/dashboard?days=7`)
+    authFetch(`${API_URL}/api/agencies/${agencyId}/dashboard?days=7`)
       .then(res => res.json())
       .then(data => {
         setOverview(data);
@@ -263,7 +274,7 @@ function TriageQueue() {
 
   useEffect(() => {
     if (!agencyId) return;
-    fetch(`${API_URL}/api/agencies/${agencyId}/triage-queue`)
+    authFetch(`${API_URL}/api/agencies/${agencyId}/triage-queue`)
       .then(res => res.json())
       .then(data => {
         setAlerts(data);
@@ -338,7 +349,7 @@ function PatientList() {
 
   useEffect(() => {
     if (!agencyId) return;
-    fetch(`${API_URL}/api/agencies/${agencyId}/patients`)
+    authFetch(`${API_URL}/api/agencies/${agencyId}/patients`)
       .then(res => res.json())
       .then(data => {
         setPatients(data);
@@ -493,8 +504,8 @@ function PatientDetail() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API_URL}/api/patients/${id}`).then(r => r.json()),
-      fetch(`${API_URL}/api/patients/${id}/check-ins?limit=10`).then(r => r.json())
+      authFetch(`${API_URL}/api/patients/${id}`).then(r => r.json()),
+      authFetch(`${API_URL}/api/patients/${id}/check-ins?limit=10`).then(r => r.json())
     ])
       .then(([patientData, checkInsData]) => {
         setPatient(patientData);
@@ -625,7 +636,7 @@ function CheckInForm() {
 
   useEffect(() => {
     if (!agencyId) return;
-    fetch(`${API_URL}/api/agencies/${agencyId}/patients`)
+    authFetch(`${API_URL}/api/agencies/${agencyId}/patients`)
       .then(res => res.json())
       .then(data => setPatients(data))
       .catch(err => console.error('Failed to load patients:', err));
@@ -658,7 +669,7 @@ function CheckInForm() {
       additionalNotes: formData.additionalNotes || null
     };
 
-    fetch(`${API_URL}/api/check-ins`, {
+    authFetch(`${API_URL}/api/check-ins`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(submitData)
@@ -895,7 +906,7 @@ function NewPatientForm() {
       caregiverPhone: formData.caregiverPhone.trim() || null
     };
 
-    fetch(`${API_URL}/api/patients`, {
+    authFetch(`${API_URL}/api/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
