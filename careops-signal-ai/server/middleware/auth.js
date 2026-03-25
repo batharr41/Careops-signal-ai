@@ -6,9 +6,15 @@ let cachedKey = null;
 async function getSupabasePublicKey() {
   if (cachedKey) return cachedKey;
 
-  const jwksUrl = `${process.env.SUPABASE_URL}/.well-known/jwks.json`;
+  const jwksUrl = `${process.env.SUPABASE_URL}/auth/v1/.well-known/jwks.json`;
+  console.log('Fetching JWKS from:', jwksUrl);
   const response = await fetch(jwksUrl);
   const jwks = await response.json();
+  console.log('JWKS response:', JSON.stringify(jwks));
+
+  if (!jwks.keys || jwks.keys.length === 0) {
+    throw new Error('No keys found in JWKS endpoint');
+  }
 
   const key = jwks.keys[0];
   const publicKey = crypto.createPublicKey({
