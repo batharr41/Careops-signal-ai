@@ -1,5 +1,6 @@
 import pool from '../database/pool.js';
 import { calculateRiskScore } from '../services/aiService.js';
+import { sendAlertNotifications } from '../services/alertService.js';
 
 let summaryQueue = null;
 let triageQueue = null;
@@ -93,6 +94,26 @@ export async function submitCheckIn(req, res) {
       );
       
       alert = alertResult.rows[0];
+      
+      // Send email/SMS notifications to caregiver
+      try {
+        const patientResult = await client.query(
+          'SELECT first_name, last_name, caregiver_name, caregiver_phone, caregiver_email FROM patients WHERE id = $1',
+          [patientId]
+        );
+        const patient = patientResult.rows[0];
+
+        // Fire and forget — don't block the response
+        sendAlertNotifications({ patient, riskScore, alert })
+          .then(results => {
+            console.log('Alert notification results:', JSON.stringify(results));
+          })
+          .catch(err => {
+            console.error('Alert notification error:', err.message);
+          });
+      } catch (err) {
+        console.error('Failed to fetch patient for notifications:', err.message);
+      }
       
       // Only queue if Redis is available
       if (triageQueue) {
