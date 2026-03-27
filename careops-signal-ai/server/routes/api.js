@@ -3,7 +3,7 @@ import checkInController from '../controllers/checkInController.js';
 import dashboardController from '../controllers/dashboardController.js';
 import pool from '../database/pool.js';
 import { authenticateJWT } from '../middleware/auth.js';
-import { generatePatientReport } from '../services/reportService.js';
+import { generatePatientReport, generateAgencyReport } from '../services/reportService.js';
 
 const router = express.Router();
 
@@ -74,7 +74,6 @@ router.post('/patients', async (req, res) => {
   try {
     const body = req.body;
 
-    // Support both camelCase (frontend) and snake_case field names
     const agency_id = body.agency_id || body.agencyId;
     const first_name = body.first_name || body.firstName;
     const last_name = body.last_name || body.lastName;
@@ -83,13 +82,11 @@ router.post('/patients', async (req, res) => {
     const caregiver_phone = body.caregiver_phone || body.caregiverPhone || null;
     const caregiver_email = body.caregiver_email || body.caregiverEmail || null;
 
-    // Convert arrays — these are text[] columns in Postgres, not jsonb
     const rawConditions = body.medical_conditions || body.medicalConditions || [];
     const rawMedications = body.medications || [];
     const medical_conditions = Array.isArray(rawConditions) ? rawConditions : [];
     const medications = Array.isArray(rawMedications) ? rawMedications : [];
 
-    // Validate required fields
     if (!agency_id || !first_name || !last_name) {
       return res.status(400).json({ error: 'agency_id, first_name, and last_name are required' });
     }
@@ -103,15 +100,9 @@ router.post('/patients', async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
-        agency_id,
-        first_name,
-        last_name,
-        date_of_birth,
-        medical_conditions,
-        medications,
-        caregiver_name,
-        caregiver_phone,
-        caregiver_email,
+        agency_id, first_name, last_name, date_of_birth,
+        medical_conditions, medications,
+        caregiver_name, caregiver_phone, caregiver_email,
         'routine'
       ]
     );
@@ -129,33 +120,17 @@ router.delete('/patients/:id', async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
-
     await client.query('BEGIN');
-
-    // Delete in order of foreign key dependencies
-    await client.query(
-      `DELETE FROM llm_summaries WHERE check_in_id IN (SELECT id FROM check_ins WHERE patient_id = $1)`,
-      [id]
-    );
-    await client.query(
-      `DELETE FROM risk_scores WHERE check_in_id IN (SELECT id FROM check_ins WHERE patient_id = $1)`,
-      [id]
-    );
+    await client.query(`DELETE FROM llm_summaries WHERE check_in_id IN (SELECT id FROM check_ins WHERE patient_id = $1)`, [id]);
+    await client.query(`DELETE FROM risk_scores WHERE check_in_id IN (SELECT id FROM check_ins WHERE patient_id = $1)`, [id]);
     await client.query('DELETE FROM alerts WHERE patient_id = $1', [id]);
     await client.query('DELETE FROM check_ins WHERE patient_id = $1', [id]);
-
-    const result = await client.query(
-      'DELETE FROM patients WHERE id = $1 RETURNING first_name, last_name',
-      [id]
-    );
-
+    const result = await client.query('DELETE FROM patients WHERE id = $1 RETURNING first_name, last_name', [id]);
     if (result.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Patient not found' });
     }
-
     await client.query('COMMIT');
-
     const { first_name, last_name } = result.rows[0];
     console.log(`Patient deleted: ${first_name} ${last_name} (${id})`);
     res.json({ message: `${first_name} ${last_name} has been deleted.` });
@@ -173,17 +148,11 @@ router.get('/patients/:id/report', async (req, res) => {
   try {
     const { id } = req.params;
     const { start, end } = req.query;
-
-    // Default to last 7 days if no dates provided
     const endDate = end ? new Date(end) : new Date();
     const startDate = start ? new Date(start) : new Date(endDate - 7 * 24 * 60 * 60 * 1000);
-
-    // Set end date to end of day
     endDate.setHours(23, 59, 59, 999);
     startDate.setHours(0, 0, 0, 0);
-
     const pdfBuffer = await generatePatientReport(id, startDate.toISOString(), endDate.toISOString());
-
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="patient-report-${id}.pdf"`);
     res.send(pdfBuffer);
@@ -193,12 +162,30 @@ router.get('/patients/:id/report', async (req, res) => {
   }
 });
 
+// GET agency-wide weekly report PDF
+router.get('/agencies/:agencyId/report', async (req, res) => {
+  try {
+    const { agencyId } = req.params;
+    const { start, end } = req.query;
+    const endDate = end ? new Date(end) : new Date();
+    const startDate = start ? new Date(start) : new Date(endDate - 7 * 24 * 60 * 60 * 1000);
+    endDate.setHours(23, 59, 59, 999);
+    startDate.setHours(0, 0, 0, 0);
+    const pdfBuffer = await generateAgencyReport(agencyId, startDate.toISOString(), endDate.toISOString());
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="agency-weekly-report.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Error generating agency report:', error);
+    res.status(500).json({ error: 'Failed to generate report: ' + error.message });
+  }
+});
+
 // Weekly report export (JSON)
 router.get('/agencies/:agencyId/reports/weekly', async (req, res) => {
   try {
     const { agencyId } = req.params;
     const { startDate, endDate } = req.query;
-    
     const result = await pool.query(
       `SELECT 
         p.first_name || ' ' || p.last_name as patient_name,
@@ -216,7 +203,6 @@ router.get('/agencies/:agencyId/reports/weekly', async (req, res) => {
        ORDER BY alerts_count DESC, avg_risk_score DESC`,
       [agencyId, startDate, endDate]
     );
-    
     res.json({
       period: { startDate, endDate },
       patients: result.rows,
