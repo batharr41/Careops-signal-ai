@@ -274,20 +274,53 @@ function TriageQueue() {
   const agencyId = '1f027307-125d-4904-8734-0424676a717d';
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [resolvingId, setResolvingId] = useState(null);
+  const [resolveNotes, setResolveNotes] = useState('');
 
-  useEffect(() => {
-    if (!agencyId) return;
+  const loadAlerts = () => {
     authFetch(`${API_URL}/api/agencies/${agencyId}/triage-queue`)
       .then(res => res.json())
       .then(data => {
-        setAlerts(data);
+        setAlerts(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(err => {
         console.error('Failed to load triage queue:', err);
         setLoading(false);
       });
-  }, [agencyId]);
+  };
+
+  useEffect(() => { if (agencyId) loadAlerts(); }, [agencyId]);
+
+  const handleAcknowledge = async (alertId) => {
+    try {
+      const res = await authFetch(`${API_URL}/api/alerts/${alertId}/acknowledge`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      if (res.ok) loadAlerts();
+    } catch (err) {
+      console.error('Failed to acknowledge alert:', err);
+    }
+  };
+
+  const handleResolve = async (alertId) => {
+    try {
+      const res = await authFetch(`${API_URL}/api/alerts/${alertId}/resolve`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resolutionNotes: resolveNotes })
+      });
+      if (res.ok) {
+        setResolvingId(null);
+        setResolveNotes('');
+        loadAlerts();
+      }
+    } catch (err) {
+      console.error('Failed to resolve alert:', err);
+    }
+  };
 
   if (loading) return <div className="loading">Loading triage queue...</div>;
 
@@ -296,7 +329,7 @@ function TriageQueue() {
       <header className="page-header">
         <div>
           <h1 className="page-title">Triage Queue</h1>
-          <p className="page-subtitle">{alerts.length} pending alert{alerts.length !== 1 ? 's' : ''}</p>
+          <p className="page-subtitle">{alerts.length} active alert{alerts.length !== 1 ? 's' : ''}</p>
         </div>
       </header>
 
@@ -313,8 +346,13 @@ function TriageQueue() {
               <div className="alert-header">
                 <div className="alert-patient">
                   <span className={`severity-dot ${alert.severity}`} />
-                  <h3>{alert.patient_name}</h3>
+                  <h3>{alert.patient_name || `${alert.first_name} ${alert.last_name}`}</h3>
                   <span className={`risk-badge ${alert.severity}`}>{alert.severity}</span>
+                  {alert.status === 'acknowledged' && (
+                    <span style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 500, marginLeft: '0.5rem' }}>
+                      Acknowledged{alert.assigned_to ? ` by ${alert.assigned_to}` : ''}
+                    </span>
+                  )}
                 </div>
                 <span className="alert-time">
                   <Clock size={14} />
@@ -328,11 +366,55 @@ function TriageQueue() {
                   <p>{alert.ai_call_script}</p>
                 </div>
               )}
-              <div className="alert-actions">
-                <Link to={`/patients/${alert.patient_id}`} className="btn-secondary">
-                  View Details
-                </Link>
-              </div>
+
+              {resolvingId === alert.id ? (
+                <div style={{ marginTop: '0.75rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem' }}>
+                    Resolution Notes
+                  </label>
+                  <textarea
+                    value={resolveNotes}
+                    onChange={e => setResolveNotes(e.target.value)}
+                    placeholder="Describe what action was taken..."
+                    rows={3}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', fontSize: '0.875rem', resize: 'vertical' }}
+                  />
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <button
+                      onClick={() => handleResolve(alert.id)}
+                      style={{ padding: '0.5rem 1rem', background: '#16a34a', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }}
+                    >
+                      Confirm Resolved
+                    </button>
+                    <button
+                      onClick={() => { setResolvingId(null); setResolveNotes(''); }}
+                      style={{ padding: '0.5rem 1rem', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="alert-actions" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                  <Link to={`/patients/${alert.patient_id}`} className="btn-secondary">
+                    View Details
+                  </Link>
+                  {alert.status === 'pending' && (
+                    <button
+                      onClick={() => handleAcknowledge(alert.id)}
+                      style={{ padding: '0.5rem 1rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }}
+                    >
+                      Acknowledge
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setResolvingId(alert.id)}
+                    style={{ padding: '0.5rem 1rem', background: '#16a34a', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }}
+                  >
+                    Resolve
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -502,20 +584,25 @@ function PatientList() {
 function PatientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const agencyId = '1f027307-125d-4904-8734-0424676a717d';
   const [patient, setPatient] = useState(null);
   const [checkIns, setCheckIns] = useState([]);
+  const [staffMembers, setStaffMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     Promise.all([
       authFetch(`${API_URL}/api/patients/${id}`).then(r => r.json()),
-      authFetch(`${API_URL}/api/patients/${id}/check-ins?limit=10`).then(r => r.json())
+      authFetch(`${API_URL}/api/patients/${id}/check-ins?limit=10`).then(r => r.json()),
+      authFetch(`${API_URL}/api/agencies/${agencyId}/staff`).then(r => r.json())
     ])
-      .then(([patientData, checkInsData]) => {
+      .then(([patientData, checkInsData, staffData]) => {
         setPatient(patientData);
         setCheckIns(Array.isArray(checkInsData) ? checkInsData : []);
+        setStaffMembers(Array.isArray(staffData) ? staffData : []);
         setLoading(false);
       })
       .catch(err => {
@@ -529,7 +616,6 @@ function PatientDetail() {
       `Are you sure you want to delete ${patient.first_name} ${patient.last_name}? This will permanently remove all their check-ins, risk scores, and alerts. This cannot be undone.`
     );
     if (!confirmed) return;
-
     setDeleting(true);
     try {
       const res = await authFetch(`${API_URL}/api/patients/${id}`, { method: 'DELETE' });
@@ -561,6 +647,24 @@ function PatientDetail() {
       alert('Failed to generate report. Please try again.');
     }
     setDownloading(false);
+  };
+
+  const handleAssignCaregiver = async (caregiverId) => {
+    setAssigning(true);
+    try {
+      const res = await authFetch(`${API_URL}/api/patients/${id}/assign`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caregiverId: caregiverId || null })
+      });
+      if (res.ok) {
+        const updatedPatient = await authFetch(`${API_URL}/api/patients/${id}`).then(r => r.json());
+        setPatient(updatedPatient);
+      }
+    } catch (err) {
+      console.error('Failed to assign caregiver:', err);
+    }
+    setAssigning(false);
   };
 
   if (loading) return <div className="loading">Loading patient details...</div>;
@@ -617,7 +721,7 @@ function PatientDetail() {
               </span>
             </div>
             <div className="info-item">
-              <span className="info-label">Caregiver</span>
+              <span className="info-label">Caregiver Contact</span>
               <span className="info-value">{patient.caregiver_name || 'Not assigned'}</span>
             </div>
             <div className="info-item">
@@ -628,6 +732,32 @@ function PatientDetail() {
               <span className="info-label">Caregiver Email</span>
               <span className="info-value">{patient.caregiver_email || 'N/A'}</span>
             </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 className="card-title">Assigned Staff Caregiver</h3>
+          <div style={{ padding: '0.5rem 0' }}>
+            {patient.assigned_first ? (
+              <p style={{ margin: '0 0 0.75rem', fontWeight: 500 }}>
+                Currently assigned to: {patient.assigned_first} {patient.assigned_last}
+              </p>
+            ) : (
+              <p style={{ margin: '0 0 0.75rem', color: '#64748b' }}>No staff caregiver assigned</p>
+            )}
+            <select
+              value={patient.assigned_caregiver_id || ''}
+              onChange={e => handleAssignCaregiver(e.target.value)}
+              disabled={assigning}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+            >
+              <option value="">Unassigned</option>
+              {staffMembers.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.first_name} {s.last_name} ({s.role})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
