@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route, Link, useParams, useNavigate, Navigate } 
 import {
   Activity, AlertCircle, Bell, Calendar, CheckCircle,
   Clock, Heart, Home, Phone, TrendingUp, Users, ChevronRight,
-  AlertTriangle, Sparkles, UserPlus, Search, ArrowUpDown, LogOut, Trash2
+  AlertTriangle, Sparkles, UserPlus, Search, ArrowUpDown, LogOut, Trash2,
+  FileText, Download
 } from 'lucide-react';
 import './App.css';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -62,6 +63,7 @@ function App() {
                     <Route path="/patients/:id" element={<PatientDetail />} />
                     <Route path="/check-in" element={<CheckInForm />} />
                     <Route path="/new-patient" element={<NewPatientForm />} />
+                    <Route path="/reports" element={<ReportsPage />} />
                   </Routes>
                 </main>
               </div>
@@ -83,6 +85,7 @@ function Sidebar() {
     { path: '/patients', icon: Users, label: 'Patients' },
     { path: '/check-in', icon: CheckCircle, label: 'New Check-In' },
     { path: '/new-patient', icon: UserPlus, label: 'New Patient' },
+    { path: '/reports', icon: FileText, label: 'Reports' },
   ];
 
   const handleSignOut = async () => {
@@ -503,6 +506,7 @@ function PatientDetail() {
   const [checkIns, setCheckIns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -538,6 +542,27 @@ function PatientDetail() {
     }
   };
 
+  const handleDownloadReport = async () => {
+    setDownloading(true);
+    try {
+      const res = await authFetch(`${API_URL}/api/patients/${id}/report`);
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${patient.first_name}-${patient.last_name}-report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download report:', err);
+      alert('Failed to generate report. Please try again.');
+    }
+    setDownloading(false);
+  };
+
   if (loading) return <div className="loading">Loading patient details...</div>;
   if (!patient) return <div className="error">Patient not found</div>;
 
@@ -550,7 +575,16 @@ function PatientDetail() {
             {patient.risk_level || 'routine'} risk
           </span>
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+        <div className="header-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleDownloadReport}
+            disabled={downloading}
+            className="btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+          >
+            <Download size={18} />
+            {downloading ? 'Generating...' : 'Download Report'}
+          </button>
           <Link to="/check-in" className="btn-primary">
             <CheckCircle size={18} />
             New Check-In
@@ -558,7 +592,6 @@ function PatientDetail() {
           <button
             onClick={handleDelete}
             disabled={deleting}
-            className="btn-danger"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
               padding: '0.625rem 1.25rem', borderRadius: '0.5rem', border: 'none',
@@ -568,7 +601,7 @@ function PatientDetail() {
             }}
           >
             <Trash2 size={18} />
-            {deleting ? 'Deleting...' : 'Delete Patient'}
+            {deleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       </header>
@@ -643,6 +676,117 @@ function PatientDetail() {
               ))}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== REPORTS PAGE ====================
+function ReportsPage() {
+  const agencyId = '1f027307-125d-4904-8734-0424676a717d';
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedPatient, setSelectedPatient] = useState('');
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => {
+    authFetch(`${API_URL}/api/agencies/${agencyId}/patients`)
+      .then(res => res.json())
+      .then(data => {
+        setPatients(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load patients:', err);
+        setLoading(false);
+      });
+  }, [agencyId]);
+
+  const handleDownload = async () => {
+    if (!selectedPatient) {
+      alert('Please select a patient.');
+      return;
+    }
+    setDownloading(true);
+    try {
+      const res = await authFetch(
+        `${API_URL}/api/patients/${selectedPatient}/report?start=${startDate}&end=${endDate}`
+      );
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const blob = await res.blob();
+      const patient = patients.find(p => p.id === selectedPatient);
+      const filename = patient
+        ? `${patient.first_name}-${patient.last_name}-report.pdf`
+        : 'patient-report.pdf';
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download report:', err);
+      alert('Failed to generate report. Please try again.');
+    }
+    setDownloading(false);
+  };
+
+  if (loading) return <div className="loading">Loading...</div>;
+
+  return (
+    <div className="check-in-form-page">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Patient Reports</h1>
+          <p className="page-subtitle">Generate and download weekly PDF reports</p>
+        </div>
+      </header>
+
+      <div className="check-in-form">
+        <div className="form-section">
+          <h3>Generate Report</h3>
+          <div className="form-group">
+            <label>Select Patient *</label>
+            <select value={selectedPatient} onChange={e => setSelectedPatient(e.target.value)}>
+              <option value="">Choose a patient...</option>
+              {patients.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.first_name} {p.last_name} — {p.risk_level || 'routine'} risk
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Start Date</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>End Date</label>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        <div className="form-actions">
+          <button
+            onClick={handleDownload}
+            className="btn-primary btn-large"
+            disabled={downloading || !selectedPatient}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Download size={20} />
+            {downloading ? 'Generating PDF...' : 'Download PDF Report'}
+          </button>
         </div>
       </div>
     </div>
