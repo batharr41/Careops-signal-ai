@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useParams, useNavigate, Navigate } 
 import {
   Activity, AlertCircle, Bell, Calendar, CheckCircle,
   Clock, Heart, Home, Phone, TrendingUp, Users, ChevronRight,
-  AlertTriangle, Sparkles, UserPlus, Search, ArrowUpDown, LogOut
+  AlertTriangle, Sparkles, UserPlus, Search, ArrowUpDown, LogOut, Trash2
 } from 'lucide-react';
 import './App.css';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -498,9 +498,11 @@ function PatientList() {
 // ==================== PATIENT DETAIL ====================
 function PatientDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [patient, setPatient] = useState(null);
   const [checkIns, setCheckIns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -518,6 +520,24 @@ function PatientDetail() {
       });
   }, [id]);
 
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${patient.first_name} ${patient.last_name}? This will permanently remove all their check-ins, risk scores, and alerts. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      const res = await authFetch(`${API_URL}/api/patients/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      navigate('/patients');
+    } catch (err) {
+      console.error('Failed to delete patient:', err);
+      alert('Failed to delete patient. Please try again.');
+      setDeleting(false);
+    }
+  };
+
   if (loading) return <div className="loading">Loading patient details...</div>;
   if (!patient) return <div className="error">Patient not found</div>;
 
@@ -530,10 +550,27 @@ function PatientDetail() {
             {patient.risk_level || 'routine'} risk
           </span>
         </div>
-        <Link to="/check-in" className="btn-primary">
-          <CheckCircle size={18} />
-          New Check-In
-        </Link>
+        <div className="header-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+          <Link to="/check-in" className="btn-primary">
+            <CheckCircle size={18} />
+            New Check-In
+          </Link>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="btn-danger"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.625rem 1.25rem', borderRadius: '0.5rem', border: 'none',
+              background: '#dc2626', color: 'white', cursor: 'pointer',
+              fontSize: '0.875rem', fontWeight: 500,
+              opacity: deleting ? 0.6 : 1
+            }}
+          >
+            <Trash2 size={18} />
+            {deleting ? 'Deleting...' : 'Delete Patient'}
+          </button>
+        </div>
       </header>
 
       <div className="patient-detail-grid">
