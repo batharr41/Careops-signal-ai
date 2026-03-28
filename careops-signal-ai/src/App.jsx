@@ -9,6 +9,7 @@ import {
 import './App.css';
 import { AuthProvider, useAuth } from './AuthContext';
 import Login from './Login';
+import LandingPage from './LandingPage';
 import { supabase } from './supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -50,8 +51,9 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/*" element={
+          <Route path="/dashboard/*" element={
             <ProtectedRoute>
               <div className="app">
                 <Sidebar />
@@ -80,12 +82,12 @@ function Sidebar() {
   const navigate = useNavigate();
 
   const navItems = [
-    { path: '/', icon: Home, label: 'Dashboard' },
-    { path: '/triage', icon: AlertCircle, label: 'Triage Queue', badge: true },
-    { path: '/patients', icon: Users, label: 'Patients' },
-    { path: '/check-in', icon: CheckCircle, label: 'New Check-In' },
-    { path: '/new-patient', icon: UserPlus, label: 'New Patient' },
-    { path: '/reports', icon: FileText, label: 'Reports' },
+    { path: '/dashboard', icon: Home, label: 'Dashboard' },
+    { path: '/dashboard/triage', icon: AlertCircle, label: 'Triage Queue', badge: true },
+    { path: '/dashboard/patients', icon: Users, label: 'Patients' },
+    { path: '/dashboard/check-in', icon: CheckCircle, label: 'New Check-In' },
+    { path: '/dashboard/new-patient', icon: UserPlus, label: 'New Patient' },
+    { path: '/dashboard/reports', icon: FileText, label: 'Reports' },
   ];
 
   const handleSignOut = async () => {
@@ -181,7 +183,7 @@ function Dashboard() {
           <p className="page-subtitle">Real-time patient monitoring and alerts</p>
         </div>
         <div className="header-actions">
-          <Link to="/check-in" className="btn-primary">
+          <Link to="/dashboard/check-in" className="btn-primary">
             <CheckCircle size={18} />
             New Check-In
           </Link>
@@ -241,22 +243,22 @@ function Dashboard() {
         <div className="card">
           <h3 className="card-title">Quick Actions</h3>
           <div className="quick-actions">
-            <Link to="/triage" className="action-link">
+            <Link to="/dashboard/triage" className="action-link">
               <AlertCircle size={20} />
               <span>View Triage Queue</span>
               <ChevronRight size={16} />
             </Link>
-            <Link to="/patients" className="action-link">
+            <Link to="/dashboard/patients" className="action-link">
               <Users size={20} />
               <span>Patient Directory</span>
               <ChevronRight size={16} />
             </Link>
-            <Link to="/check-in" className="action-link">
+            <Link to="/dashboard/check-in" className="action-link">
               <CheckCircle size={20} />
               <span>Submit Check-In</span>
               <ChevronRight size={16} />
             </Link>
-            <Link to="/new-patient" className="action-link">
+            <Link to="/dashboard/new-patient" className="action-link">
               <UserPlus size={20} />
               <span>Add New Patient</span>
               <ChevronRight size={16} />
@@ -396,7 +398,7 @@ function TriageQueue() {
                 </div>
               ) : (
                 <div className="alert-actions" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                  <Link to={`/patients/${alert.patient_id}`} className="btn-secondary">
+                  <Link to={`/dashboard/patients/${alert.patient_id}`} className="btn-secondary">
                     View Details
                   </Link>
                   {alert.status === 'pending' && (
@@ -492,7 +494,7 @@ function PatientList() {
           <h1 className="page-title">Patient Directory</h1>
           <p className="page-subtitle">{patients.length} active patient{patients.length !== 1 ? 's' : ''}</p>
         </div>
-        <Link to="/new-patient" className="btn-primary">
+        <Link to="/dashboard/new-patient" className="btn-primary">
           <UserPlus size={18} />
           Add Patient
         </Link>
@@ -527,7 +529,7 @@ function PatientList() {
       ) : (
         <div className="patient-grid">
           {sorted.map((patient) => (
-            <Link key={patient.id} to={`/patients/${patient.id}`} className="patient-card">
+            <Link key={patient.id} to={`/dashboard/patients/${patient.id}`} className="patient-card">
               <div className="patient-card-header">
                 <div className="patient-avatar">
                   {patient.first_name?.[0]}{patient.last_name?.[0]}
@@ -620,7 +622,7 @@ function PatientDetail() {
     try {
       const res = await authFetch(`${API_URL}/api/patients/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
-      navigate('/patients');
+      navigate('/dashboard/patients');
     } catch (err) {
       console.error('Failed to delete patient:', err);
       alert('Failed to delete patient. Please try again.');
@@ -689,7 +691,7 @@ function PatientDetail() {
             <Download size={18} />
             {downloading ? 'Generating...' : 'Download Report'}
           </button>
-          <Link to="/check-in" className="btn-primary">
+          <Link to="/dashboard/check-in" className="btn-primary">
             <CheckCircle size={18} />
             New Check-In
           </Link>
@@ -1082,7 +1084,7 @@ function CheckInForm() {
               Submit Another Check-In
             </button>
             {result.alert && (
-              <Link to="/triage" className="btn-secondary">
+              <Link to="/dashboard/triage" className="btn-secondary">
                 View in Triage Queue
               </Link>
             )}
@@ -1307,7 +1309,7 @@ function NewPatientForm() {
             <button className="btn-primary" onClick={() => { setSuccess(null); setFormData({ firstName: '', lastName: '', dateOfBirth: '', medicalConditions: '', medications: '', caregiverName: '', caregiverPhone: '', caregiverEmail: '' }); }}>
               Add Another Patient
             </button>
-            <Link to="/patients" className="btn-secondary">
+            <Link to="/dashboard/patients" className="btn-secondary">
               View Patient Directory
             </Link>
           </div>
