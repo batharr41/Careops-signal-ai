@@ -8,7 +8,6 @@ FileText, Download
 } from ‘lucide-react’;
 import ‘./App.css’;
 import { AuthProvider, useAuth } from ‘./AuthContext’;
-import Login from ‘./Login’;
 import LandingPage from ‘./LandingPage’;
 import { supabase } from ‘./supabaseClient’;
 
