@@ -3,39 +3,53 @@ import { format, subDays } from 'date-fns';
 
 /**
  * Get dashboard overview for an agency
+ * Admins see all patients; caregivers see only their assigned patients
  */
 export async function getDashboardOverview(req, res) {
   try {
-    const { agencyId } = req.params;
-    const { days = 7 } = req.query;
-    const startDate = subDays(new Date(), parseInt(days));
+    var agencyId = req.params.agencyId;
+    var days = req.query.days || 7;
+    var startDate = subDays(new Date(), parseInt(days));
 
-    const riskDistribution = await pool.query(
-      `SELECT risk_level, COUNT(*) as count FROM patients WHERE agency_id = $1 GROUP BY risk_level`,
-      [agencyId]
+    // Build caregiver filter
+    var caregiverFilter = '';
+    var baseParams = [agencyId];
+    if (req.userRole === 'caregiver' && req.staffUser) {
+      caregiverFilter = ' AND p.assigned_caregiver_id = $2';
+      baseParams = [agencyId, req.staffUser.id];
+    }
+
+    var riskDistribution = await pool.query(
+      'SELECT risk_level, COUNT(*) as count FROM patients p WHERE p.agency_id = $1' + caregiverFilter + ' GROUP BY risk_level',
+      baseParams
     );
 
-    const recentCheckIns = await pool.query(
-      `SELECT COUNT(*) as total FROM check_ins ci JOIN patients p ON ci.patient_id = p.id WHERE p.agency_id = $1 AND ci.submitted_at >= $2`,
-      [agencyId, startDate]
+    var dateParamIndex = baseParams.length + 1;
+    var checkInParams = baseParams.concat([startDate]);
+
+    var recentCheckIns = await pool.query(
+      'SELECT COUNT(*) as total FROM check_ins ci JOIN patients p ON ci.patient_id = p.id WHERE p.agency_id = $1' + caregiverFilter + ' AND ci.submitted_at >= $' + dateParamIndex,
+      checkInParams
     );
 
-    const pendingAlerts = await pool.query(
-      `SELECT severity, COUNT(*) as count FROM alerts a JOIN patients p ON a.patient_id = p.id WHERE p.agency_id = $1 AND a.status = 'pending' GROUP BY severity`,
-      [agencyId]
+    var pendingAlerts = await pool.query(
+      'SELECT severity, COUNT(*) as count FROM alerts a JOIN patients p ON a.patient_id = p.id WHERE p.agency_id = $1' + caregiverFilter + ' AND a.status = \'pending\' GROUP BY severity',
+      baseParams
     );
 
-    const dailyTrends = await pool.query(
-      `SELECT DATE(ci.submitted_at) as date, COUNT(*) as check_ins, AVG(rs.score) as avg_risk_score,
-        COUNT(CASE WHEN rs.risk_level IN ('critical', 'elevated') THEN 1 END) as high_risk_count
-       FROM check_ins ci JOIN patients p ON ci.patient_id = p.id LEFT JOIN risk_scores rs ON ci.id = rs.check_in_id
-       WHERE p.agency_id = $1 AND ci.submitted_at >= $2 GROUP BY DATE(ci.submitted_at) ORDER BY date DESC`,
-      [agencyId, startDate]
+    var dailyTrends = await pool.query(
+      'SELECT DATE(ci.submitted_at) as date, COUNT(*) as check_ins, AVG(rs.score) as avg_risk_score, COUNT(CASE WHEN rs.risk_level IN (\'critical\', \'elevated\') THEN 1 END) as high_risk_count FROM check_ins ci JOIN patients p ON ci.patient_id = p.id LEFT JOIN risk_scores rs ON ci.id = rs.check_in_id WHERE p.agency_id = $1' + caregiverFilter + ' AND ci.submitted_at >= $' + dateParamIndex + ' GROUP BY DATE(ci.submitted_at) ORDER BY date DESC',
+      checkInParams
+    );
+
+    var totalPatientsResult = await pool.query(
+      'SELECT COUNT(*) as count FROM patients p WHERE p.agency_id = $1' + caregiverFilter,
+      baseParams
     );
 
     res.json({
       riskDistribution: riskDistribution.rows,
-      totalPatients: (await pool.query('SELECT COUNT(*) as count FROM patients WHERE agency_id = $1', [agencyId])).rows[0].count,
+      totalPatients: totalPatientsResult.rows[0].count,
       recentCheckIns: recentCheckIns.rows[0].total,
       pendingAlerts: pendingAlerts.rows,
       dailyTrends: dailyTrends.rows
@@ -49,30 +63,22 @@ export async function getDashboardOverview(req, res) {
 
 /**
  * Get active alerts for triage queue - includes acknowledged alerts too
+ * Admins see all alerts; caregivers see only alerts for their assigned patients
  */
 export async function getTriageQueue(req, res) {
   try {
-    const { agencyId } = req.params;
+    var agencyId = req.params.agencyId;
 
-    const result = await pool.query(
-      `SELECT 
-        a.*,
-        p.first_name || ' ' || p.last_name as patient_name,
-        p.first_name, p.last_name, p.caregiver_name, p.caregiver_phone,
-        tq.priority, tq.call_script as ai_call_script, tq.suggested_actions,
-        ci.submitted_at as check_in_time,
-        su.first_name as resolved_by_first, su.last_name as resolved_by_last
-       FROM alerts a
-       JOIN patients p ON a.patient_id = p.id
-       LEFT JOIN triage_queue tq ON a.id = tq.alert_id
-       LEFT JOIN check_ins ci ON a.check_in_id = ci.id
-       LEFT JOIN staff_users su ON a.resolved_by = su.id
-       WHERE p.agency_id = $1 AND a.status IN ('pending', 'acknowledged')
-       ORDER BY 
-         CASE a.status WHEN 'pending' THEN 0 WHEN 'acknowledged' THEN 1 END,
-         CASE a.severity WHEN 'critical' THEN 0 WHEN 'elevated' THEN 1 ELSE 2 END,
-         a.created_at ASC`,
-      [agencyId]
+    var caregiverFilter = '';
+    var params = [agencyId];
+    if (req.userRole === 'caregiver' && req.staffUser) {
+      caregiverFilter = ' AND p.assigned_caregiver_id = $2';
+      params = [agencyId, req.staffUser.id];
+    }
+
+    var result = await pool.query(
+      'SELECT a.*, p.first_name || \' \' || p.last_name as patient_name, p.first_name, p.last_name, p.caregiver_name, p.caregiver_phone, tq.priority, tq.call_script as ai_call_script, tq.suggested_actions, ci.submitted_at as check_in_time, su.first_name as resolved_by_first, su.last_name as resolved_by_last FROM alerts a JOIN patients p ON a.patient_id = p.id LEFT JOIN triage_queue tq ON a.id = tq.alert_id LEFT JOIN check_ins ci ON a.check_in_id = ci.id LEFT JOIN staff_users su ON a.resolved_by = su.id WHERE p.agency_id = $1' + caregiverFilter + ' AND a.status IN (\'pending\', \'acknowledged\') ORDER BY CASE a.status WHEN \'pending\' THEN 0 WHEN \'acknowledged\' THEN 1 END, CASE a.severity WHEN \'critical\' THEN 0 WHEN \'elevated\' THEN 1 ELSE 2 END, a.created_at ASC',
+      params
     );
 
     res.json(result.rows);
@@ -87,23 +93,19 @@ export async function getTriageQueue(req, res) {
  */
 export async function getPatientTrends(req, res) {
   try {
-    const { patientId } = req.params;
-    const { days = 30 } = req.query;
-    const startDate = subDays(new Date(), parseInt(days));
+    var patientId = req.params.patientId;
+    var days = req.query.days || 30;
+    var startDate = subDays(new Date(), parseInt(days));
 
-    const trends = await pool.query(
-      `SELECT DATE(ci.submitted_at) as date, ci.pain_level, ci.appetite, ci.sleep_quality,
-        ci.mood, ci.medications_taken, ci.temperature, ci.heart_rate,
-        rs.score as risk_score, rs.risk_level
-       FROM check_ins ci LEFT JOIN risk_scores rs ON ci.id = rs.check_in_id
-       WHERE ci.patient_id = $1 AND ci.submitted_at >= $2 ORDER BY ci.submitted_at ASC`,
+    var trends = await pool.query(
+      'SELECT DATE(ci.submitted_at) as date, ci.pain_level, ci.appetite, ci.sleep_quality, ci.mood, ci.medications_taken, ci.temperature, ci.heart_rate, rs.score as risk_score, rs.risk_level FROM check_ins ci LEFT JOIN risk_scores rs ON ci.id = rs.check_in_id WHERE ci.patient_id = $1 AND ci.submitted_at >= $2 ORDER BY ci.submitted_at ASC',
       [patientId, startDate]
     );
 
-    const aggregated = trends.rows.reduce((acc, row) => {
-      const date = row.date.toISOString().split('T')[0];
+    var aggregated = trends.rows.reduce(function(acc, row) {
+      var date = row.date.toISOString().split('T')[0];
       if (!acc[date]) {
-        acc[date] = { date, painLevel: [], riskScore: [], temperature: [], heartRate: [], medicationCompliance: [] };
+        acc[date] = { date: date, painLevel: [], riskScore: [], temperature: [], heartRate: [], medicationCompliance: [] };
       }
       if (row.pain_level !== null) acc[date].painLevel.push(row.pain_level);
       if (row.risk_score !== null) acc[date].riskScore.push(row.risk_score);
@@ -113,14 +115,16 @@ export async function getPatientTrends(req, res) {
       return acc;
     }, {});
 
-    const trendData = Object.values(aggregated).map(day => ({
-      date: day.date,
-      avgPainLevel: day.painLevel.length ? (day.painLevel.reduce((a, b) => a + b, 0) / day.painLevel.length).toFixed(1) : null,
-      avgRiskScore: day.riskScore.length ? (day.riskScore.reduce((a, b) => a + b, 0) / day.riskScore.length).toFixed(0) : null,
-      avgTemperature: day.temperature.length ? (day.temperature.reduce((a, b) => a + b, 0) / day.temperature.length).toFixed(1) : null,
-      avgHeartRate: day.heartRate.length ? Math.round(day.heartRate.reduce((a, b) => a + b, 0) / day.heartRate.length) : null,
-      medicationCompliance: day.medicationCompliance.length ? Math.round((day.medicationCompliance.reduce((a, b) => a + b, 0) / day.medicationCompliance.length) * 100) : null
-    }));
+    var trendData = Object.values(aggregated).map(function(day) {
+      return {
+        date: day.date,
+        avgPainLevel: day.painLevel.length ? (day.painLevel.reduce(function(a, b) { return a + b; }, 0) / day.painLevel.length).toFixed(1) : null,
+        avgRiskScore: day.riskScore.length ? (day.riskScore.reduce(function(a, b) { return a + b; }, 0) / day.riskScore.length).toFixed(0) : null,
+        avgTemperature: day.temperature.length ? (day.temperature.reduce(function(a, b) { return a + b; }, 0) / day.temperature.length).toFixed(1) : null,
+        avgHeartRate: day.heartRate.length ? Math.round(day.heartRate.reduce(function(a, b) { return a + b; }, 0) / day.heartRate.length) : null,
+        medicationCompliance: day.medicationCompliance.length ? Math.round((day.medicationCompliance.reduce(function(a, b) { return a + b; }, 0) / day.medicationCompliance.length) * 100) : null
+      };
+    });
 
     res.json(trendData);
   } catch (error) {
@@ -134,27 +138,21 @@ export async function getPatientTrends(req, res) {
  */
 export async function acknowledgeAlert(req, res) {
   try {
-    const { alertId } = req.params;
-    const userEmail = req.user?.email;
+    var alertId = req.params.alertId;
+    var userEmail = req.user?.email;
 
-    // Look up staff user from JWT email
-    let staffId = null;
-    let staffName = 'Unknown';
+    var staffId = null;
+    var staffName = 'Unknown';
     if (userEmail) {
-      const staffResult = await pool.query('SELECT id, first_name, last_name FROM staff_users WHERE email = $1', [userEmail]);
+      var staffResult = await pool.query('SELECT id, first_name, last_name FROM staff_users WHERE email = $1', [userEmail]);
       if (staffResult.rows.length > 0) {
         staffId = staffResult.rows[0].id;
-        staffName = `${staffResult.rows[0].first_name} ${staffResult.rows[0].last_name}`;
+        staffName = staffResult.rows[0].first_name + ' ' + staffResult.rows[0].last_name;
       }
     }
 
-    const result = await pool.query(
-      `UPDATE alerts 
-       SET status = 'acknowledged', 
-           assigned_to = $1, 
-           acknowledged_at = NOW()
-       WHERE id = $2
-       RETURNING *`,
+    var result = await pool.query(
+      'UPDATE alerts SET status = \'acknowledged\', assigned_to = $1, acknowledged_at = NOW() WHERE id = $2 RETURNING *',
       [staffName, alertId]
     );
 
@@ -174,27 +172,20 @@ export async function acknowledgeAlert(req, res) {
  */
 export async function resolveAlert(req, res) {
   try {
-    const { alertId } = req.params;
-    const { resolutionNotes } = req.body;
-    const userEmail = req.user?.email;
+    var alertId = req.params.alertId;
+    var resolutionNotes = req.body.resolutionNotes;
+    var userEmail = req.user?.email;
 
-    // Look up staff user from JWT email
-    let staffId = null;
+    var staffId = null;
     if (userEmail) {
-      const staffResult = await pool.query('SELECT id FROM staff_users WHERE email = $1', [userEmail]);
+      var staffResult = await pool.query('SELECT id FROM staff_users WHERE email = $1', [userEmail]);
       if (staffResult.rows.length > 0) {
         staffId = staffResult.rows[0].id;
       }
     }
 
-    const result = await pool.query(
-      `UPDATE alerts 
-       SET status = 'resolved', 
-           resolved_at = NOW(),
-           resolved_by = $1,
-           resolution_notes = $2
-       WHERE id = $3
-       RETURNING *`,
+    var result = await pool.query(
+      'UPDATE alerts SET status = \'resolved\', resolved_at = NOW(), resolved_by = $1, resolution_notes = $2 WHERE id = $3 RETURNING *',
       [staffId, resolutionNotes || null, alertId]
     );
 
@@ -202,7 +193,7 @@ export async function resolveAlert(req, res) {
       return res.status(404).json({ error: 'Alert not found' });
     }
 
-    console.log(`Alert ${alertId} resolved by ${userEmail}`);
+    console.log('Alert ' + alertId + ' resolved by ' + userEmail);
     res.json({ success: true, alert: result.rows[0] });
   } catch (error) {
     console.error('Error resolving alert:', error);
@@ -215,9 +206,9 @@ export async function resolveAlert(req, res) {
  */
 export async function getStaffMembers(req, res) {
   try {
-    const { agencyId } = req.params;
-    const result = await pool.query(
-      `SELECT id, email, first_name, last_name, role FROM staff_users WHERE agency_id = $1 ORDER BY last_name, first_name`,
+    var agencyId = req.params.agencyId;
+    var result = await pool.query(
+      'SELECT id, email, first_name, last_name, role FROM staff_users WHERE agency_id = $1 ORDER BY last_name, first_name',
       [agencyId]
     );
     res.json(result.rows);
@@ -232,10 +223,10 @@ export async function getStaffMembers(req, res) {
  */
 export async function getCurrentUser(req, res) {
   try {
-    const userEmail = req.user?.email;
+    var userEmail = req.user?.email;
     if (!userEmail) return res.status(401).json({ error: 'No user email in token' });
 
-    const result = await pool.query(
+    var result = await pool.query(
       'SELECT id, agency_id, email, first_name, last_name, role FROM staff_users WHERE email = $1',
       [userEmail]
     );
