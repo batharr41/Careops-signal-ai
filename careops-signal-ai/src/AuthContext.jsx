@@ -18,12 +18,15 @@ export function AuthProvider({ children }) {
   var loading = _loading[0], setLoading = _loading[1];
   var _demoMode = useState(false);
   var demoMode = _demoMode[0], setDemoMode = _demoMode[1];
+  var _needsOnboarding = useState(false);
+  var needsOnboarding = _needsOnboarding[0], setNeedsOnboarding = _needsOnboarding[1];
 
   function fetchUserProfile(session) {
     if (!session || !session.access_token) {
       setUserRole(null);
       setAgencyId(null);
       setLinkedPatientId(null);
+      setNeedsOnboarding(false);
       return Promise.resolve();
     }
     return fetch(API_URL + '/api/me', {
@@ -35,14 +38,28 @@ export function AuthProvider({ children }) {
       })
       .then(function(profile) {
         if (profile) {
-          setUserRole(profile.role || null);
-          setAgencyId(profile.agency_id || null);
-          setLinkedPatientId(profile.patient_id || null);
+          if (profile.needs_onboarding) {
+            setNeedsOnboarding(true);
+            setUserRole(null);
+            setAgencyId(null);
+          } else {
+            setNeedsOnboarding(false);
+            setUserRole(profile.role || null);
+            setAgencyId(profile.agency_id || null);
+            setLinkedPatientId(profile.patient_id || null);
+          }
         }
       })
       .catch(function(err) {
         console.error('Failed to fetch user profile:', err);
       });
+  }
+
+  function refreshProfile() {
+    return supabase.auth.getSession().then(function(result) {
+      var session = result.data.session;
+      if (session) return fetchUserProfile(session);
+    });
   }
 
   useEffect(function() {
@@ -64,6 +81,7 @@ export function AuthProvider({ children }) {
         setUserRole(null);
         setAgencyId(null);
         setLinkedPatientId(null);
+        setNeedsOnboarding(false);
       }
     });
 
@@ -85,6 +103,7 @@ export function AuthProvider({ children }) {
       setUserRole(null);
       setAgencyId(null);
       setLinkedPatientId(null);
+      setNeedsOnboarding(false);
       return Promise.resolve();
     }
     return supabase.auth.signOut();
@@ -92,6 +111,7 @@ export function AuthProvider({ children }) {
 
   function startDemo() {
     setDemoMode(true);
+    setNeedsOnboarding(false);
     setUser({ email: 'demo@betweenvisits.com', id: 'demo-user' });
     setUserRole('admin');
     setAgencyId('demo-agency-001');
@@ -116,7 +136,9 @@ export function AuthProvider({ children }) {
       isCaregiver: isCaregiver,
       isFamily: isFamily,
       demoMode: demoMode,
-      startDemo: startDemo
+      startDemo: startDemo,
+      needsOnboarding: needsOnboarding,
+      refreshProfile: refreshProfile
     }
   }, !loading && children);
 }
