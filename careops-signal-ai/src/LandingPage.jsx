@@ -25,16 +25,17 @@ function BetweenVisitsLogo({ size = 48 }) {
 function getPasswordStrength(password) {
   if (!password) return { level: 0, label: '', color: '' };
   var score = 0;
-  if (password.length >= 6) score++;
-  if (password.length >= 8) score++;
+  if (password.length >= 10) score++;
+  if (password.length >= 14) score++;
   if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
   if (/[0-9]/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
-  if (score <= 1) return { level: 1, label: 'Weak', color: '#dc2626' };
-  if (score <= 2) return { level: 2, label: 'Fair', color: '#f59e0b' };
-  if (score <= 3) return { level: 3, label: 'Good', color: '#eab308' };
-  if (score <= 4) return { level: 4, label: 'Strong', color: '#16a34a' };
+  if (score <= 2) return { level: 1, label: 'Weak', color: '#dc2626' };
+  if (score <= 3) return { level: 2, label: 'Fair', color: '#f59e0b' };
+  if (score <= 4) return { level: 3, label: 'Good', color: '#eab308' };
+  if (score <= 5) return { level: 4, label: 'Strong', color: '#16a34a' };
   return { level: 5, label: 'Very Strong', color: '#059669' };
 }
 
@@ -47,8 +48,6 @@ function LoginPanel({ isOpen, onClose }) {
   var email = _email[0], setEmail = _email[1];
   var _password = useState('');
   var password = _password[0], setPassword = _password[1];
-  var _rememberMe = useState(false);
-  var rememberMe = _rememberMe[0], setRememberMe = _rememberMe[1];
   var _loading = useState(false);
   var loading = _loading[0], setLoading = _loading[1];
   var _error = useState(null);
@@ -73,8 +72,8 @@ function LoginPanel({ isOpen, onClose }) {
         navigate('/dashboard');
       }
     } else {
-      if (strength.level < 2) {
-        setError('Password is too weak. Use at least 8 characters with uppercase, numbers, or symbols.');
+      if (strength.level < 3) {
+        setError('Password must be at least 10 characters with uppercase, lowercase, a number, and a special character.');
         setLoading(false);
         return;
       }
@@ -129,7 +128,7 @@ function LoginPanel({ isOpen, onClose }) {
                 onChange={function(e) { setPassword(e.target.value); }}
                 placeholder="--------"
                 required
-                minLength={6}
+                minLength={10}
               />
               {mode === 'signup' && password.length > 0 && (
                 <div className="password-strength">
@@ -152,20 +151,11 @@ function LoginPanel({ isOpen, onClose }) {
                 </div>
               )}
               {mode === 'signup' && (
-                <p className="password-hint">Use 8+ characters with uppercase, numbers, and symbols</p>
+                <p className="password-hint">Minimum 10 characters with uppercase, lowercase, number, and symbol</p>
               )}
             </div>
 
-            {mode === 'login' && (
-              <label className="remember-me">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={function(e) { setRememberMe(e.target.checked); }}
-                />
-                <span>Remember me</span>
-              </label>
-            )}
+
 
             <button
               type="submit"
