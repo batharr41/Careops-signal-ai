@@ -4,7 +4,7 @@ import {
   Activity, AlertCircle, Bell, Calendar, CheckCircle,
   Clock, Heart, Home, Phone, TrendingUp, Users, ChevronRight,
   AlertTriangle, Sparkles, UserPlus, Search, ArrowUpDown, LogOut, Trash2,
-  FileText, Download, Eye, Menu, X
+  FileText, Download, Eye, Menu, X, Shield
 } from 'lucide-react';
 import './App.css';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -234,6 +234,7 @@ function Sidebar({ isOpen, onClose }) {
     { path: '/dashboard/patients', icon: Users, label: 'Patients', roles: ['admin', 'caregiver'] },
     { path: '/dashboard/check-in', icon: CheckCircle, label: 'New Check-In', roles: ['admin', 'caregiver'] },
     { path: '/dashboard/new-patient', icon: UserPlus, label: 'New Patient', roles: ['admin'] },
+    { path: '/dashboard/staff', icon: Shield, label: 'Staff', roles: ['admin'] },
     { path: '/dashboard/reports', icon: FileText, label: 'Reports', roles: ['admin'] },
   ];
   var navItems = allNavItems.filter(function(item) { return item.roles.includes(userRole); });
@@ -832,6 +833,187 @@ function NewPatientForm() {
         </div><div className="form-group"><label>Caregiver Email</label><input type="email" value={formData.caregiverEmail} onChange={function(e) { setFormData(Object.assign({}, formData, { caregiverEmail: e.target.value })); }} placeholder="e.g., lisa.chen@email.com" /></div></div>
         <div className="form-actions"><button type="submit" className="btn-primary btn-large" disabled={submitting}>{submitting ? 'Adding Patient...' : 'Add Patient'}</button></div>
       </form>
+    </div>
+  );
+}
+
+// ==================== STAFF MANAGEMENT ====================
+function StaffManagement() {
+  var { isAdmin, demoMode, agencyId } = useAuth();
+  var _staff = useState([]); var staff = _staff[0], setStaff = _staff[1];
+  var _loading = useState(true); var loading = _loading[0], setLoading = _loading[1];
+  var _showForm = useState(false); var showForm = _showForm[0], setShowForm = _showForm[1];
+  var _submitting = useState(false); var submitting = _submitting[0], setSubmitting = _submitting[1];
+  var _error = useState(null); var error = _error[0], setError = _error[1];
+  var _success = useState(null); var success = _success[0], setSuccess = _success[1];
+  var _formData = useState({ email: '', firstName: '', lastName: '', role: 'caregiver' });
+  var formData = _formData[0], setFormData = _formData[1];
+
+  function loadStaff() {
+    if (demoMode) {
+      setStaff(DEMO_STAFF);
+      setLoading(false);
+      return;
+    }
+    if (!agencyId) return;
+    authFetch(API_URL + '/api/agencies/' + agencyId + '/staff')
+      .then(function(res) { return res.json(); })
+      .then(function(data) { setStaff(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(function(err) { console.error('Failed to load staff:', err); setLoading(false); });
+  }
+
+  useEffect(function() { loadStaff(); }, [agencyId, demoMode]);
+
+  var handleAddStaff = function(e) {
+    e.preventDefault();
+    if (demoMode) { alert('This is a demo - sign up for a free account to manage staff!'); return; }
+    setSubmitting(true);
+    setError(null);
+    setSuccess(null);
+
+    authFetch(API_URL + '/api/agencies/' + agencyId + '/staff', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: formData.email.trim(),
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        role: formData.role
+      })
+    })
+      .then(function(res) {
+        if (!res.ok) return res.json().then(function(data) { throw new Error(data.error || 'Failed to add staff'); });
+        return res.json();
+      })
+      .then(function(data) {
+        setSuccess(data.first_name + ' ' + data.last_name + ' has been added as ' + data.role + '. They can now sign up with ' + data.email + ' and will automatically join your agency.');
+        setFormData({ email: '', firstName: '', lastName: '', role: 'caregiver' });
+        setSubmitting(false);
+        setShowForm(false);
+        loadStaff();
+      })
+      .catch(function(err) {
+        setError(err.message);
+        setSubmitting(false);
+      });
+  };
+
+  var handleRemoveStaff = function(staffId, name) {
+    if (demoMode) { alert('This is a demo - sign up for a free account to manage staff!'); return; }
+    if (!window.confirm('Remove ' + name + ' from your agency? They will lose access to all patient data.')) return;
+
+    authFetch(API_URL + '/api/agencies/' + agencyId + '/staff/' + staffId, { method: 'DELETE' })
+      .then(function(res) {
+        if (!res.ok) return res.json().then(function(data) { throw new Error(data.error || 'Failed to remove'); });
+        loadStaff();
+      })
+      .catch(function(err) { alert(err.message); });
+  };
+
+  if (loading) return <div className="loading">Loading staff...</div>;
+
+  return (
+    <div className="patient-list">
+      {demoMode && <DemoBanner />}
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Staff Management</h1>
+          <p className="page-subtitle">{staff.length} team member{staff.length !== 1 ? 's' : ''}</p>
+        </div>
+        {!demoMode && (
+          <button onClick={function() { setShowForm(!showForm); setError(null); setSuccess(null); }} className="btn-primary">
+            <UserPlus size={18} />
+            {showForm ? 'Cancel' : 'Add Staff Member'}
+          </button>
+        )}
+      </header>
+
+      {success && (
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', padding: '1rem 1.5rem', marginBottom: '1.5rem', color: 'var(--green)', fontSize: '0.9375rem' }}>
+          <CheckCircle size={16} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+          {success}
+        </div>
+      )}
+
+      {showForm && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <h3 className="card-title">Add Staff Member</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+            Add a team member to your agency. They will need to create a BetweenVisits account using the same email address to log in.
+          </p>
+
+          {error && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1rem', color: 'var(--red)', fontSize: '0.875rem' }}>
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleAddStaff}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="form-group">
+                <label>First Name *</label>
+                <input type="text" value={formData.firstName} onChange={function(e) { setFormData(Object.assign({}, formData, { firstName: e.target.value })); }} placeholder="e.g., Maria" required />
+              </div>
+              <div className="form-group">
+                <label>Last Name</label>
+                <input type="text" value={formData.lastName} onChange={function(e) { setFormData(Object.assign({}, formData, { lastName: e.target.value })); }} placeholder="e.g., Santos" />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div className="form-group">
+                <label>Email Address *</label>
+                <input type="email" value={formData.email} onChange={function(e) { setFormData(Object.assign({}, formData, { email: e.target.value })); }} placeholder="e.g., maria@agency.com" required />
+              </div>
+              <div className="form-group">
+                <label>Role *</label>
+                <select value={formData.role} onChange={function(e) { setFormData(Object.assign({}, formData, { role: e.target.value })); }}>
+                  <option value="caregiver">Caregiver</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" className="btn-primary" disabled={submitting} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+              <UserPlus size={18} />
+              {submitting ? 'Adding...' : 'Add to Agency'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      <div className="card">
+        <h3 className="card-title">Team Members</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {staff.map(function(member) {
+            return (
+              <div key={member.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'var(--bg)', borderRadius: '0.75rem' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: member.role === 'admin' ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'linear-gradient(135deg, #60a5fa, #3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 600, fontSize: '0.875rem', flexShrink: 0 }}>
+                  {(member.first_name || '?')[0]}{(member.last_name || '')[0] || ''}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--text)' }}>
+                    {member.first_name} {member.last_name}
+                  </div>
+                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {member.email}
+                  </div>
+                </div>
+                <span style={{ padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', background: member.role === 'admin' ? '#ede9fe' : '#dbeafe', color: member.role === 'admin' ? '#7c3aed' : '#2563eb' }}>
+                  {member.role}
+                </span>
+                {!demoMode && (
+                  <button
+                    onClick={function() { handleRemoveStaff(member.id, member.first_name + ' ' + member.last_name); }}
+                    title="Remove staff member"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)', padding: '0.25rem' }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
