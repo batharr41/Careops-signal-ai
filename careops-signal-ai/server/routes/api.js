@@ -108,6 +108,72 @@ router.get('/patients/:patientId/trends', dashboardController.getPatientTrends);
 
 router.get('/agencies/:agencyId/staff', requireRole('admin'), enforceAgencyScope, dashboardController.getStaffMembers);
 
+// Add a new staff member to the agency
+router.post('/agencies/:agencyId/staff', requireRole('admin'), enforceAgencyScope, async (req, res) => {
+  try {
+    var agencyId = req.params.agencyId;
+    var email = (req.body.email || '').trim().toLowerCase();
+    var firstName = (req.body.firstName || '').trim();
+    var lastName = (req.body.lastName || '').trim();
+    var role = req.body.role || 'caregiver';
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    if (!firstName) {
+      return res.status(400).json({ error: 'First name is required' });
+    }
+    if (role !== 'admin' && role !== 'caregiver') {
+      return res.status(400).json({ error: 'Role must be admin or caregiver' });
+    }
+
+    // Check if email already exists in staff_users
+    var existing = await pool.query('SELECT id, agency_id FROM staff_users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'A staff member with this email already exists' });
+    }
+
+    var result = await pool.query(
+      'INSERT INTO staff_users (agency_id, email, password_hash, first_name, last_name, role) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, agency_id, email, first_name, last_name, role, created_at',
+      [agencyId, email, 'supabase-auth-managed', firstName, lastName || '', role]
+    );
+
+    console.log('Staff member added: ' + firstName + ' ' + lastName + ' (' + email + ') as ' + role + ' to agency ' + agencyId);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error adding staff member:', error);
+    res.status(500).json({ error: 'Failed to add staff member: ' + error.message });
+  }
+});
+
+// Remove a staff member from the agency
+router.delete('/agencies/:agencyId/staff/:staffId', requireRole('admin'), enforceAgencyScope, async (req, res) => {
+  try {
+    var staffId = req.params.staffId;
+
+    // Prevent admin from deleting themselves
+    if (req.staffUser && req.staffUser.id === staffId) {
+      return res.status(400).json({ error: 'You cannot remove yourself' });
+    }
+
+    var result = await pool.query(
+      'DELETE FROM staff_users WHERE id = $1 AND agency_id = $2 RETURNING first_name, last_name, email',
+      [staffId, req.params.agencyId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Staff member not found' });
+    }
+
+    var deleted = result.rows[0];
+    console.log('Staff member removed: ' + deleted.first_name + ' ' + deleted.last_name + ' (' + deleted.email + ')');
+    res.json({ message: deleted.first_name + ' ' + deleted.last_name + ' has been removed.' });
+  } catch (error) {
+    console.error('Error removing staff member:', error);
+    res.status(500).json({ error: 'Failed to remove staff member: ' + error.message });
+  }
+});
+
 router.put('/alerts/:alertId/acknowledge', requireRole('admin', 'caregiver'), dashboardController.acknowledgeAlert);
 router.put('/alerts/:alertId/resolve', requireRole('admin', 'caregiver'), dashboardController.resolveAlert);
 
