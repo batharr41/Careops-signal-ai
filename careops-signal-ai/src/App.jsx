@@ -4,7 +4,7 @@ import {
   Activity, AlertCircle, Bell, Calendar, CheckCircle,
   Clock, Heart, Home, Phone, TrendingUp, Users, ChevronRight,
   AlertTriangle, Sparkles, UserPlus, Search, ArrowUpDown, LogOut, Trash2,
-  FileText, Download, Eye
+  FileText, Download, Eye, Menu, X
 } from 'lucide-react';
 import './App.css';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -66,6 +66,31 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function AppShell() {
+  var _sidebarOpen = useState(false);
+  var sidebarOpen = _sidebarOpen[0], setSidebarOpen = _sidebarOpen[1];
+  return (
+    <div className="app">
+      <button className="mobile-menu-btn" onClick={function() { setSidebarOpen(!sidebarOpen); }}>
+        {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+      </button>
+      <div className={'sidebar-overlay ' + (sidebarOpen ? 'open' : '')} onClick={function() { setSidebarOpen(false); }} />
+      <Sidebar isOpen={sidebarOpen} onClose={function() { setSidebarOpen(false); }} />
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/triage" element={<TriageQueue />} />
+          <Route path="/patients" element={<PatientList />} />
+          <Route path="/patients/:id" element={<PatientDetail />} />
+          <Route path="/check-in" element={<CheckInForm />} />
+          <Route path="/new-patient" element={<NewPatientForm />} />
+          <Route path="/reports" element={<ReportsPage />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -73,31 +98,14 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LandingPage />} />
-          <Route path="/dashboard/*" element={
-            <ProtectedRoute>
-              <div className="app">
-                <Sidebar />
-                <main className="main-content">
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/triage" element={<TriageQueue />} />
-                    <Route path="/patients" element={<PatientList />} />
-                    <Route path="/patients/:id" element={<PatientDetail />} />
-                    <Route path="/check-in" element={<CheckInForm />} />
-                    <Route path="/new-patient" element={<NewPatientForm />} />
-                    <Route path="/reports" element={<ReportsPage />} />
-                  </Routes>
-                </main>
-              </div>
-            </ProtectedRoute>
-          } />
+          <Route path="/dashboard/*" element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
   );
 }
 
-function Sidebar() {
+function Sidebar({ isOpen, onClose }) {
   var { user, signOut, userRole, isAdmin, isCaregiver, isFamily, demoMode } = useAuth();
   var navigate = useNavigate();
   var allNavItems = [
@@ -114,7 +122,7 @@ function Sidebar() {
   var roleLabel = demoMode ? 'Demo Admin' : isAdmin ? 'Admin' : isCaregiver ? 'Caregiver' : isFamily ? 'Family' : 'User';
 
   return (
-    <aside className="sidebar">
+    <aside className={'sidebar ' + (isOpen ? 'open' : '')}>
       <div className="sidebar-header">
         <div className="logo">
           <BetweenVisitsIcon size={40} />
@@ -127,7 +135,7 @@ function Sidebar() {
       <nav className="nav">
         {navItems.map(function(item) {
           return (
-            <Link key={item.path} to={item.path} className="nav-item">
+            <Link key={item.path} to={item.path} className="nav-item" onClick={onClose}>
               <item.icon size={20} />
               <span>{item.label}</span>
               {item.badge && <span className="badge">New</span>}
