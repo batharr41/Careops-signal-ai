@@ -39,10 +39,62 @@ router.get('/me', async (req, res) => {
     if (familyResult.rows.length > 0) {
       return res.json({ ...familyResult.rows[0], role: 'family' });
     }
-    return res.status(404).json({ error: 'User not found' });
+    return res.json({ email: userEmail, needs_onboarding: true });
   } catch (error) {
     console.error('Error fetching current user:', error);
     res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+});
+
+// Onboarding: create a new agency and link the current user as admin
+router.post('/onboarding', async (req, res) => {
+  var client = await pool.connect();
+  try {
+    var userEmail = req.user?.email;
+    if (!userEmail) return res.status(401).json({ error: 'No user email in token' });
+
+    // Check if user already has a staff record
+    var existing = await client.query('SELECT id FROM staff_users WHERE email = $1', [userEmail]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'User already belongs to an agency' });
+    }
+
+    var agencyName = (req.body.agencyName || '').trim();
+    var firstName = (req.body.firstName || '').trim();
+    var lastName = (req.body.lastName || '').trim();
+
+    if (!agencyName) {
+      return res.status(400).json({ error: 'Agency name is required' });
+    }
+
+    await client.query('BEGIN');
+
+    // Create the agency
+    var agencyResult = await client.query(
+      'INSERT INTO agencies (name, contact_email) VALUES ($1, $2) RETURNING *',
+      [agencyName, userEmail]
+    );
+    var agency = agencyResult.rows[0];
+
+    // Create the staff user as admin
+    var staffResult = await client.query(
+      'INSERT INTO staff_users (agency_id, email, password_hash, first_name, last_name, role) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, agency_id, email, first_name, last_name, role',
+      [agency.id, userEmail, 'supabase-auth-managed', firstName || 'Admin', lastName || '', 'admin']
+    );
+
+    await client.query('COMMIT');
+
+    console.log('New agency onboarded: ' + agencyName + ' (' + agency.id + ') by ' + userEmail);
+    res.status(201).json({
+      agency: agency,
+      user: staffResult.rows[0]
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Onboarding error:', error);
+    res.status(500).json({ error: 'Failed to complete onboarding: ' + error.message });
+  } finally {
+    client.release();
   }
 });
 
