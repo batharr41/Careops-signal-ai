@@ -1,52 +1,64 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+var API_URL = import.meta.env.VITE_API_URL || '';
 
-const AuthContext = createContext({});
+var AuthContext = createContext({});
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
-  const [agencyId, setAgencyId] = useState(null);
-  const [linkedPatientId, setLinkedPatientId] = useState(null);
-  const [loading, setLoading] = useState(true);
+  var _user = useState(null);
+  var user = _user[0], setUser = _user[1];
+  var _userRole = useState(null);
+  var userRole = _userRole[0], setUserRole = _userRole[1];
+  var _agencyId = useState(null);
+  var agencyId = _agencyId[0], setAgencyId = _agencyId[1];
+  var _linkedPatientId = useState(null);
+  var linkedPatientId = _linkedPatientId[0], setLinkedPatientId = _linkedPatientId[1];
+  var _loading = useState(true);
+  var loading = _loading[0], setLoading = _loading[1];
+  var _demoMode = useState(false);
+  var demoMode = _demoMode[0], setDemoMode = _demoMode[1];
 
-  async function fetchUserProfile(session) {
-    if (!session?.access_token) {
+  function fetchUserProfile(session) {
+    if (!session || !session.access_token) {
       setUserRole(null);
       setAgencyId(null);
       setLinkedPatientId(null);
-      return;
+      return Promise.resolve();
     }
-    try {
-      const res = await fetch(API_URL + '/api/me', {
-        headers: { Authorization: 'Bearer ' + session.access_token }
+    return fetch(API_URL + '/api/me', {
+      headers: { Authorization: 'Bearer ' + session.access_token }
+    })
+      .then(function(res) {
+        if (res.ok) return res.json();
+        return null;
+      })
+      .then(function(profile) {
+        if (profile) {
+          setUserRole(profile.role || null);
+          setAgencyId(profile.agency_id || null);
+          setLinkedPatientId(profile.patient_id || null);
+        }
+      })
+      .catch(function(err) {
+        console.error('Failed to fetch user profile:', err);
       });
-      if (res.ok) {
-        const profile = await res.json();
-        setUserRole(profile.role || null);
-        setAgencyId(profile.agency_id || null);
-        setLinkedPatientId(profile.patient_id || null);
-      }
-    } catch (err) {
-      console.error('Failed to fetch user profile:', err);
-    }
   }
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session).then(() => setLoading(false));
+  useEffect(function() {
+    supabase.auth.getSession().then(function(result) {
+      var session = result.data.session;
+      setUser(session ? session.user : null);
+      if (session && session.user) {
+        fetchUserProfile(session).then(function() { setLoading(false); });
       } else {
         setLoading(false);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
+    var sub = supabase.auth.onAuthStateChange(function(_event, session) {
+      setUser(session ? session.user : null);
+      if (session && session.user) {
         fetchUserProfile(session);
       } else {
         setUserRole(null);
@@ -55,26 +67,60 @@ export function AuthProvider({ children }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return function() { sub.data.subscription.unsubscribe(); };
   }, []);
 
-  const signUp = (email, password) => supabase.auth.signUp({ email, password });
-  const signIn = (email, password) => supabase.auth.signInWithPassword({ email, password });
-  const signOut = () => supabase.auth.signOut();
+  function signUp(email, password) {
+    return supabase.auth.signUp({ email: email, password: password });
+  }
 
-  const isAdmin = userRole === 'admin';
-  const isCaregiver = userRole === 'caregiver';
-  const isFamily = userRole === 'family';
+  function signIn(email, password) {
+    return supabase.auth.signInWithPassword({ email: email, password: password });
+  }
 
-  return (
-    <AuthContext.Provider value={{
-      user, loading, signUp, signIn, signOut,
-      userRole, agencyId, linkedPatientId,
-      isAdmin, isCaregiver, isFamily
-    }}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  function signOut() {
+    if (demoMode) {
+      setDemoMode(false);
+      setUser(null);
+      setUserRole(null);
+      setAgencyId(null);
+      setLinkedPatientId(null);
+      return Promise.resolve();
+    }
+    return supabase.auth.signOut();
+  }
+
+  function startDemo() {
+    setDemoMode(true);
+    setUser({ email: 'demo@betweenvisits.com', id: 'demo-user' });
+    setUserRole('admin');
+    setAgencyId('demo-agency-001');
+    setLinkedPatientId(null);
+  }
+
+  var isAdmin = userRole === 'admin';
+  var isCaregiver = userRole === 'caregiver';
+  var isFamily = userRole === 'family';
+
+  return React.createElement(AuthContext.Provider, {
+    value: {
+      user: user,
+      loading: loading,
+      signUp: signUp,
+      signIn: signIn,
+      signOut: signOut,
+      userRole: userRole,
+      agencyId: agencyId,
+      linkedPatientId: linkedPatientId,
+      isAdmin: isAdmin,
+      isCaregiver: isCaregiver,
+      isFamily: isFamily,
+      demoMode: demoMode,
+      startDemo: startDemo
+    }
+  }, !loading && children);
 }
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  return useContext(AuthContext);
+}
