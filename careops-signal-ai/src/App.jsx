@@ -203,6 +203,7 @@ function AppShell() {
           <Route path="/patients/:id" element={<PatientDetail />} />
           <Route path="/check-in" element={<CheckInForm />} />
           <Route path="/new-patient" element={<NewPatientForm />} />
+          <Route path="/staff" element={<StaffManagement />} />
           <Route path="/reports" element={<ReportsPage />} />
         </Routes>
       </main>
@@ -855,7 +856,7 @@ function StaffManagement() {
       setLoading(false);
       return;
     }
-    if (!agencyId) return;
+    if (!agencyId) { setLoading(false); return; }
     authFetch(API_URL + '/api/agencies/' + agencyId + '/staff')
       .then(function(res) { return res.json(); })
       .then(function(data) { setStaff(Array.isArray(data) ? data : []); setLoading(false); })
