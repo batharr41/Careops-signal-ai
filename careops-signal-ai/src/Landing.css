@@ -310,13 +310,26 @@
 }
 
 @media (max-width: 640px) {
-  .landing-hero h1 { font-size: 2rem; }
-  .landing-hero { padding: 6rem 1rem 3rem; }
-  .section-header h2 { font-size: 1.75rem; }
+  .landing-hero h1 { font-size: 1.75rem; }
+  .landing-hero { padding: 5rem 1rem 2.5rem; }
+  .hero-subtitle { font-size: 0.95rem; }
+  .section-header h2 { font-size: 1.5rem; }
   .features-grid { grid-template-columns: 1fr; }
-  .hero-actions { flex-direction: column; align-items: center; }
+  .hero-actions { flex-direction: column; align-items: stretch; width: 100%; }
+  .hero-actions button,
+  .hero-actions a { width: 100%; justify-content: center; text-align: center; }
   .landing-nav-links a:not(.landing-nav-cta) { display: none; }
-  .landing-cta h2 { font-size: 1.75rem; }
+  .landing-nav-links { gap: 0.75rem; }
+  .landing-nav-cta { padding: 0.5rem 0.875rem; font-size: 0.8rem; }
+  .landing-cta h2 { font-size: 1.5rem; }
+  .landing-cta p { font-size: 0.9rem; }
+  .landing-footer { padding: 1.5rem 1rem; }
+  .footer-text { font-size: 0.8rem; }
+  .pricing-price .price-amount { font-size: 2.5rem; }
+  .feature-card { padding: 1.5rem; }
+  .feature-card h3 { font-size: 1.05rem; }
+  .landing-nav-inner { padding: 0.75rem 1rem; }
+  .landing-logo span { font-size: 1.05rem; }
 }
 
 .login-overlay {
