@@ -20,6 +20,10 @@ export function AuthProvider({ children }) {
   var demoMode = _demoMode[0], setDemoMode = _demoMode[1];
   var _needsOnboarding = useState(false);
   var needsOnboarding = _needsOnboarding[0], setNeedsOnboarding = _needsOnboarding[1];
+  var _trialExpired = useState(false);
+  var trialExpired = _trialExpired[0], setTrialExpired = _trialExpired[1];
+  var _trialEndsAt = useState(null);
+  var trialEndsAt = _trialEndsAt[0], setTrialEndsAt = _trialEndsAt[1];
 
   function fetchUserProfile(session) {
     if (!session || !session.access_token) {
@@ -27,6 +31,8 @@ export function AuthProvider({ children }) {
       setAgencyId(null);
       setLinkedPatientId(null);
       setNeedsOnboarding(false);
+      setTrialExpired(false);
+      setTrialEndsAt(null);
       return Promise.resolve();
     }
     return fetch(API_URL + '/api/me', {
@@ -42,11 +48,15 @@ export function AuthProvider({ children }) {
             setNeedsOnboarding(true);
             setUserRole(null);
             setAgencyId(null);
+            setTrialExpired(false);
+            setTrialEndsAt(null);
           } else {
             setNeedsOnboarding(false);
             setUserRole(profile.role || null);
             setAgencyId(profile.agency_id || null);
             setLinkedPatientId(profile.patient_id || null);
+            setTrialExpired(profile.trial_expired || false);
+            setTrialEndsAt(profile.trial_ends_at || null);
           }
         }
       })
@@ -82,6 +92,8 @@ export function AuthProvider({ children }) {
         setAgencyId(null);
         setLinkedPatientId(null);
         setNeedsOnboarding(false);
+        setTrialExpired(false);
+        setTrialEndsAt(null);
       }
     });
 
@@ -104,6 +116,8 @@ export function AuthProvider({ children }) {
       setAgencyId(null);
       setLinkedPatientId(null);
       setNeedsOnboarding(false);
+      setTrialExpired(false);
+      setTrialEndsAt(null);
       return Promise.resolve();
     }
     return supabase.auth.signOut();
@@ -112,6 +126,8 @@ export function AuthProvider({ children }) {
   function startDemo() {
     setDemoMode(true);
     setNeedsOnboarding(false);
+    setTrialExpired(false);
+    setTrialEndsAt(null);
     setUser({ email: 'demo@betweenvisits.com', id: 'demo-user' });
     setUserRole('admin');
     setAgencyId('demo-agency-001');
@@ -138,6 +154,8 @@ export function AuthProvider({ children }) {
       demoMode: demoMode,
       startDemo: startDemo,
       needsOnboarding: needsOnboarding,
+      trialExpired: trialExpired,
+      trialEndsAt: trialEndsAt,
       refreshProfile: refreshProfile
     }
   }, !loading && children);
