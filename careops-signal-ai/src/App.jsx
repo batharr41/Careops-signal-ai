@@ -6,6 +6,7 @@ import {
   AlertTriangle, Sparkles, UserPlus, Search, ArrowUpDown, LogOut, Trash2,
   FileText, Download, Eye, Menu, X, Shield, ClipboardList
 } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 import './App.css';
 import { AuthProvider, useAuth } from './AuthContext';
 import LandingPage from './LandingPage';
@@ -295,6 +296,7 @@ function App() {
           <Route path="/onboarding" element={<OnboardingScreen />} />
           <Route path="/dashboard/*" element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
         </Routes>
+        <Analytics />
       </BrowserRouter>
     </AuthProvider>
   );
