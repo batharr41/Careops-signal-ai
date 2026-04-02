@@ -218,6 +218,7 @@ export default function LandingPage() {
             <a href="#features">Features</a>
             <a href="#how-it-works">How It Works</a>
             <a href="#pricing">Pricing</a>
+            <a href="#contact">Contact</a>
             <button
               onClick={handleTryDemo}
               style={{
@@ -425,6 +426,23 @@ export default function LandingPage() {
               <Eye size={18} />
               Try Live Demo
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-contact" id="contact" style={{ padding: '4rem 2rem', background: '#f8fafc', textAlign: 'center' }}>
+        <div className="section-inner">
+          <div className="section-header">
+            <h2>Get In Touch</h2>
+            <p>Have questions or want a walkthrough? We would love to hear from you.</p>
+          </div>
+          <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+            <a href="mailto:batharbetweenvisits@gmail.com" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
+              batharbetweenvisits@gmail.com
+            </a>
+            <p style={{ color: '#64748b', maxWidth: '500px', lineHeight: 1.6 }}>
+              Whether you are a home care agency exploring BetweenVisits or have feedback to share, drop us an email and we will get back to you within 24 hours.
+            </p>
           </div>
         </div>
       </section>
