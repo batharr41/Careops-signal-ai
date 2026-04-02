@@ -187,5 +187,5 @@ Signup → /api/me (needs_onboarding: true) → /onboarding → creates agency +
 ---
 
 <p align="center">
-  <sub>© 2025 BetweenVisits. All rights reserved. This code is provided for viewing purposes only and may not be copied, modified, or distributed without written permission.</sub>
+  <sub>© 2026 BetweenVisits. All rights reserved. This code is provided for viewing purposes only and may not be copied, modified, or distributed without written permission.</sub>
 </p>
