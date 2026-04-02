@@ -1,247 +1,191 @@
-<div align="center">
-  <img src="./careops-signal-ai/screenshots/betweenvisits-logo.svg" alt="BetweenVisits" width="320" />
-  <br /><br />
-  <strong>AI-powered patient monitoring for home care agencies — catching decline before it becomes a crisis.</strong>
-  <br /><br />
+<p align="center">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=white" />
+  <img src="https://img.shields.io/badge/Node.js-Express-339933?style=for-the-badge&logo=node.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" />
+  <img src="https://img.shields.io/badge/AI-Claude%20API-D97706?style=for-the-badge&logo=anthropic&logoColor=white" />
+  <img src="https://img.shields.io/badge/Deploy-Vercel%20%2B%20Render-000000?style=for-the-badge&logo=vercel&logoColor=white" />
+</p>
 
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org)
-[![React](https://img.shields.io/badge/react-18.2.0-blue)](https://reactjs.org)
-[![PostgreSQL](https://img.shields.io/badge/postgresql-14%2B-blue)](https://postgresql.org)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+<h1 align="center">🏥 BetweenVisits</h1>
 
-</div>
+<p align="center">
+  <strong>AI-Powered Patient Monitoring & Triage Platform for Home Care Agencies</strong>
+</p>
 
-Home care patients are seen once or twice a day at most. A lot can go wrong in between. BetweenVisits fills that gap with structured daily check-ins and AI-driven risk detection, giving coordinators real-time visibility into every patient on their panel — without being in the room.
-
-🔗 **Live Demo:** [betweenvisits.vercel.app](https://betweenvisits.vercel.app)
-🔗 **API:** [betweenvisits.onrender.com](https://betweenvisits.onrender.com)
-
----
-
-## The Problem
-
-Home care coordinators manage dozens of patients they can only visit periodically. Between those visits, patients can deteriorate — fall, skip medications, report worsening pain — and no one finds out until the next scheduled visit. By then, it's often an emergency.
-
-**BetweenVisits solves the gap.**
+<p align="center">
+  <a href="https://betweenvisits.org/">🔗 Live App</a> &nbsp;•&nbsp;
+  <a href="mailto:batharbetweenvisits@gmail.com">📧 Contact</a> &nbsp;•&nbsp;
+  <a href="https://betweenvisits.org/?login">🚀 Start Free Trial</a>
+</p>
 
 ---
 
-## 📸 Screenshots
+## 🎯 The Problem
 
-### Dashboard Overview
-*Real-time monitoring with color-coded risk alerts, patient statistics, and weekly trends*
-<img width="1878" height="859" alt="Screenshot (578)" src="https://github.com/user-attachments/assets/e9e6f747-b710-4ad6-a599-c8b1e601b093" />
+Home care agencies track patient status between visits through **paper notes, group texts, and phone calls**. Critical changes in a patient's condition get buried in text threads or lost in handoffs. By the time someone notices, it's an ER visit that could have been prevented.
 
-### Triage Queue with Critical Alerts
-*Prioritized patient alerts with detailed symptoms and AI-generated action steps*
-<img width="1920" height="863" alt="Screenshot (579)" src="https://github.com/user-attachments/assets/34027869-3657-43bf-a39c-b2e853e12904" />
+## 💡 The Solution
 
-### Patient Directory
-*All active patients with risk-based color coding, check-in history, and medical conditions*
-<img width="1919" height="853" alt="Screenshot (580)" src="https://github.com/user-attachments/assets/3435d85b-b057-4180-b858-90652efd17ae" />
+BetweenVisits replaces fragmented communication with a structured, AI-powered monitoring system:
 
+> **1.** Caregiver submits a digital check-in → **2.** AI scores risk 0-100 → **3.** Instant alert if risk is elevated
 
-### AI-Powered Features
-*Claude AI generates shift summaries, risk explanations, and triage call scripts from structured data — no hallucinations*
-![AI Features](./careops-signal-ai/screenshots/ai.png)
+No more missed warning signs. No more information falling through the cracks.
 
 ---
 
 ## ✨ Features
 
-- **🎯 Real-Time Risk Scoring** — Instant 0-100 risk assessment using 15+ detection rules
-- **🤖 AI-Powered Summaries** — Claude generates shift handoff notes from structured data only
-- **🚨 Smart Triage Queue** — Prioritized alerts with AI-generated call scripts
-- **📊 Trend Analytics** — Track patient metrics over time to prevent hospitalizations
-- **🏥 HIPAA-Ready Architecture** — Audit logging, encryption, grounded AI (no medical advice)
+### 🩺 Core Monitoring
+- **Daily Check-In Forms** — Pain levels, mobility, medications, mood, vitals, and free-text notes
+- **AI Risk Scoring** — Every check-in analyzed by Claude AI to detect concerning patterns and generate a triage summary
+- **Patient Dashboard** — Search, sort, and filter patients by risk level with real-time status
+
+### 🚨 Alerts & Triage
+- **Real-Time Triage Queue** — Prioritized list of patients needing attention, sortable by risk level
+- **Email Alerts** — Automated notifications via Resend when risk levels spike
+- **SMS Alerts** — Text message notifications via Twilio
+- **Acknowledge/Resolve Workflow** — Track who responded, when, and what action was taken
+
+### 📄 Reports & Compliance
+- **Per-Patient PDF Reports** — Professional reports for doctor visits or family updates
+- **Agency-Wide PDF Reports** — Summary reports across all patients
+- **HIPAA Audit Logging** — Every PHI access and admin action logged with user, action, resource, IP address, and timestamp
+- **Audit Log Viewer** — Admin page with paginated audit trail
+
+### 👥 Team & Access
+- **Role-Based Access Control** — Three roles: Admin, Caregiver, Family
+- **Caregiver Assignment** — Staff only see their assigned patients
+- **Staff Management** — Admins add/remove staff; new staff auto-join on signup
+- **Multi-Agency Support** — Full data isolation between agencies
+
+### 🏁 Onboarding & Trial
+- **Agency Self-Onboarding** — Sign up → enter agency name → fully provisioned in seconds
+- **7-Day Free Trial** — Trial countdown with expiration screen and pricing tiers
+- **Demo Mode** — Try the full app with static data, no signup required
+
+### 📱 Design & UX
+- **Landing Page** — Hero, features, pricing, contact section, slide-in login panel
+- **Mobile Responsive** — Hamburger menu, responsive grids at 1024/768/480px breakpoints
+- **Password Strength Meter** — Visual indicator enforcing strong passwords
 
 ---
 
-## 🚀 Quick Start
+## 🛠 Tech Stack
 
-### Prerequisites
-
-- Node.js 20+
-- PostgreSQL 14+
-- Redis
-- [Anthropic API key](https://console.anthropic.com/)
-
-### Setup
-```bash
-# Install dependencies
-npm install
-
-# Configure environment
-cp .env.example .env
-# Add your Anthropic API key to .env
-
-# Set up database
-npm run setup-db
-npm run seed
-
-# Start services (3 terminals)
-redis-server              # Terminal 1
-npm run server            # Terminal 2
-npm run client            # Terminal 3
-
-# Open browser
-http://localhost:3000
+```
+┌─────────────────────────────────────────────────────┐
+│  FRONTEND          │  React + Vite → Vercel         │
+│  BACKEND           │  Node.js / Express → Render    │
+│  DATABASE          │  PostgreSQL via Supabase        │
+│  AUTH              │  Supabase Auth (ES256 JWT/JWKS) │
+│  AI ENGINE         │  Anthropic Claude API           │
+│  EMAIL ALERTS      │  Resend                         │
+│  SMS ALERTS        │  Twilio                         │
+│  PDF GENERATION    │  PDFKit                         │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🤖 How the AI Works
+## 🏗 Architecture
 
-Powered by **Claude Sonnet** for three key functions:
-
-**1. Shift Handoff Summaries**
-3-4 sentence clinical summaries using only structured check-in data. No hallucinations or outside medical knowledge.
-
-**2. Risk Explanations**
-Explains why the risk score changed and what specific things staff should verify next.
-
-**3. Triage Call Scripts**
-Generates questions to ask caregivers based on recorded symptoms and patient history.
-
-> All AI processing is async (via Redis/Bull queue) — users never wait for responses. AI can only summarize existing data, never adds outside medical knowledge or diagnoses.
-
----
-
-## 📊 Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, Vite, Recharts |
-| Backend | Node.js, Express |
-| Database | PostgreSQL via Supabase (Session Pooler) |
-| Queue | Redis, Bull |
-| AI | Anthropic Claude API |
-| Hosting | Vercel (frontend), Render (backend) |
-
----
-
-## 💡 Key Use Cases
-
-- ✅ **Daily Check-Ins** — Caregivers submit structured patient status (pain, meds, vitals)
-- ✅ **Risk Detection** — Algorithm scores 0-100 based on patterns (falls, missed meds, symptoms)
-- ✅ **Alert Generation** — High-risk patients trigger immediate alerts
-- ✅ **AI Triage** — Staff get call scripts and verification steps
-- ✅ **Trend Tracking** — Monitor patient changes over time
-
----
-
-## 🎯 Sample Data
-
-Run `npm run seed` to create:
-
-- 5 realistic patients with medical histories
-- 8+ check-ins including critical scenarios
-- Live alerts in triage queue
-- Ready-to-explore dashboard
-
-**Patient Examples:**
-- Harold Thompson (Critical) — Fall incident with severe hip pain
-- Robert Williams (Critical) — Missed medications with respiratory symptoms
-- Dorothy Martinez (Elevated) — Increased confusion
-- Betty Anderson (Routine) — Stable Parkinson's patient
-- Margaret Chen (Routine) — Well-controlled diabetes
-
----
-
-## 📈 Risk Scoring
-
-Algorithm uses 15+ detection rules:
-
-| Signal | Points |
-|---|---|
-| Fall incident | +30 |
-| Missed medications | +25 |
-| Abnormal vitals | +15 |
-| Severe pain (8-10) | +20 |
-| New symptoms | +10 each |
-
-**Risk Levels:** Routine (0-14) → Moderate (15-34) → Elevated (35-59) → Critical (60-100)
-
----
-
-## 🔧 Project Structure
 ```
-betweenvisits/
-├── server/
-│   ├── services/aiService.js      # Claude API integration
-│   ├── queues/aiQueue.js          # Async AI processing
-│   ├── controllers/               # API logic
-│   └── database/                  # Schema & seeds
-├── src/
-│   ├── App.jsx                    # Main React component
-│   └── App.css                    # UI styles
-└── package.json
+                        ┌──────────────────────┐
+                        │   betweenvisits.org   │
+                        └──────────┬───────────┘
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │                             │
+             ┌──────▼──────┐              ┌───────▼───────┐
+             │   Vercel    │              │    Render     │
+             │  (React)    │──authFetch──▶│  (Express)    │
+             └─────────────┘              └───────┬───────┘
+                                                  │
+                           ┌──────────────────────┼──────────────────────┐
+                           │                      │                      │
+                    ┌──────▼──────┐       ┌───────▼───────┐      ┌──────▼──────┐
+                    │  Supabase   │       │  Claude AI    │      │   Resend    │
+                    │  (Postgres) │       │  (Risk Score) │      │   Twilio    │
+                    │  (Auth)     │       │  (Triage)     │      │  (Alerts)   │
+                    └─────────────┘       └───────────────┘      └─────────────┘
+```
+
+### 🔐 Auth Flow
+```
+Supabase Auth → JWT → authenticateJWT → requireRole() → enforceAgencyScope()
+```
+
+### 🆕 Onboarding Flow
+```
+Signup → /api/me (needs_onboarding: true) → /onboarding → creates agency + staff → /dashboard
+```
+
+### ⏱ Trial Flow
+```
+/api/me (trial_expired: true) → /trial-expired → pricing tiers → "Upgrade Now"
 ```
 
 ---
 
-## 🔒 Security & Compliance
+## 🗄 Database Schema
 
-Built with HIPAA in mind:
-- Audit logging for all PHI access
-- Environment-based secrets
-- Grounded AI (no hallucinations)
-- Encryption ready
-- Row-level security planned
+| Table | Key Columns |
+|-------|------------|
+| **agencies** | `id`, `name`, `contact_email`, `trial_ends_at` |
+| **staff_users** | `id`, `agency_id`, `email`, `first_name`, `last_name`, `role` (admin \| caregiver) |
+| **family_users** | `id`, `agency_id`, `patient_id`, `email`, `first_name`, `last_name`, `relationship` |
+| **patients** | `id`, `agency_id`, `first_name`, `last_name`, `date_of_birth`, `medical_conditions` (text[]), `medications` (text[]), `risk_level`, `assigned_caregiver_id` |
+| **check_ins** | `id`, `patient_id`, `agency_id`, `pain_level`, `mobility`, `mood`, `risk_score`, `ai_summary` |
+| **alerts** | `id`, `patient_id`, `risk_score`, `status`, `assigned_to`, `acknowledged_at`, `resolved_at`, `resolution_notes` |
+| **audit_log** | `id`, `user_id`, `action`, `resource_type`, `resource_id`, `details` (JSONB), `ip_address` |
+
+> 🔒 Row Level Security enabled on all tables. Full data isolation between agencies.
 
 ---
 
-## 🎯 Roadmap
-- [x] Patient check-in submission
-- [x] AI risk scoring via Claude API
-- [x] Agency dashboard with triage queue
-- [x] Connection stability (pool.js optimization)
-- [x] New patient form
-- [x] Patient list with search, sort, and last check-in tracking
-- [x] Supabase Auth (login/signup, JWT-protected API routes)
-- [x] Email/SMS alerts for high-risk check-ins (Resend + Twilio)
-- [x] PDF weekly reports (per-patient and agency-wide)
-- [x] Triage queue with acknowledge/resolve workflow
-- [x] Caregiver assignment to patients
-- [x] Delete patient with cascading data removal
-- [x] Row Level Security on all database tables
-- [x] Role-based access (family vs caregiver vs admin views)
-- [x] Multi-agency support (dynamic agency scoping)
-- [x] Agency self-onboarding
-- [ ] Figma visual redesign
-- [x] Landing page and pricing page
-- [x] Demo mode for prospects
+## 📋 Roadmap
+
+### ✅ Completed
+- [x] Core monitoring (check-ins, patient list, AI triage)
+- [x] Supabase Auth with JWT verification (ES256/JWKS)
+- [x] Row Level Security on all tables
+- [x] Email alerts (Resend) + SMS alerts (Twilio)
+- [x] PDF reports (per-patient and agency-wide)
+- [x] Delete patient with cascading deletion
+- [x] Triage acknowledge/resolve workflow
+- [x] Caregiver assignment
+- [x] Landing page with pricing tiers
+- [x] Password strength indicator
+- [x] Role-based access control (admin, caregiver, family)
+- [x] Demo mode (no signup required)
 - [x] Mobile responsive design
-- [ ] HIPAA audit logging
-- [ ] Stripe billing
+- [x] Multi-agency support
+- [x] Agency self-onboarding
+- [x] Staff management
+- [x] HIPAA audit logging
+- [x] 7-day trial system
+
+### 🔜 Up Next
+- [ ] Stripe billing (wire "Upgrade Now" to Stripe Checkout)
+- [ ] BAAs with subprocessors
+- [ ] Terms of Service / Privacy Policy / BAA template
+- [ ] Visual redesign (Figma)
 
 ---
 
-## 🎓 API Reference
+## 👨‍💻 About
 
-**POST `/api/check-ins`** — Submit new patient check-in
-```json
-{
-  "patientId": "uuid",
-  "submittedBy": "Caregiver Name",
-  "painLevel": 8,
-  "medicationsTaken": false,
-  "missedMedications": ["Morning BP med"],
-  "temperature": 101.2,
-  "heartRate": 115,
-  "newSymptoms": ["shortness of breath"],
-  "fallIncident": false
-}
-```
+**Built by Bilal Athar** — solo developer, designed and developed end-to-end.
 
-**GET `/api/patients/:patientId/check-ins`** — Patient check-in history
-
-**GET `/api/agencies/:agencyId/dashboard`** — Dashboard stats and trends
-
-**GET `/api/agencies/:agencyId/triage-queue`** — Pending alerts with AI call scripts
+<p align="center">
+  <a href="https://betweenvisits.org/">🌐 betweenvisits.org</a> &nbsp;•&nbsp;
+  <a href="mailto:batharbetweenvisits@gmail.com">📧 batharbetweenvisits@gmail.com</a> &nbsp;•&nbsp;
+  <a href="https://github.com/batharr41">💻 github.com/batharr41</a>
+</p>
 
 ---
 
-## 📄 License
-
-MIT
+<p align="center">
+  <sub>© 2025 BetweenVisits. All rights reserved. This code is provided for viewing purposes only and may not be copied, modified, or distributed without written permission.</sub>
+</p>
