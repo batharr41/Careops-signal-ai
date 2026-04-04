@@ -7,6 +7,7 @@ import {
   FileText, Download, Eye, Menu, X, Shield, ClipboardList
 } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import './App.css';
 import { AuthProvider, useAuth } from './AuthContext';
 import LandingPage from './LandingPage';
@@ -297,6 +298,7 @@ function App() {
           <Route path="/dashboard/*" element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
         </Routes>
         <Analytics />
+        <SpeedInsights />
       </BrowserRouter>
     </AuthProvider>
   );

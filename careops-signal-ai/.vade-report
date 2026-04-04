@@ -1,0 +1,40 @@
+## Vercel Speed Insights Installation
+
+Successfully installed and configured Vercel Speed Insights for the careops-signal-ai project.
+
+### Changes Made:
+
+**1. Package Installation**
+- Installed `@vercel/speed-insights` package (version 1.0.15 as of installation)
+- Updated package.json dependencies
+- Updated package-lock.json with new dependency tree
+
+**2. Code Integration**
+- Modified `src/App.jsx` to import and use the SpeedInsights component
+  - Added import: `import { SpeedInsights } from '@vercel/speed-insights/react';`
+  - Added `<SpeedInsights />` component alongside the existing `<Analytics />` component inside the BrowserRouter
+
+### Framework Details:
+This project uses **Vite + React**, and the installation followed the official Vercel documentation for React-based projects.
+
+### Implementation Approach:
+- Followed the same pattern as the existing `@vercel/analytics` integration
+- Placed the SpeedInsights component at the app root level within the BrowserRouter
+- This ensures Speed Insights tracks performance metrics across all routes
+
+### Verification:
+✅ Build completed successfully with `npm run build`
+✅ No build errors or warnings
+✅ Build artifacts properly ignored by git
+✅ Package lock file updated correctly
+
+### Files Modified:
+- `package.json` - Added @vercel/speed-insights dependency
+- `package-lock.json` - Updated with new dependency tree
+- `src/App.jsx` - Added SpeedInsights component import and usage
+
+### Notes:
+- Speed Insights will automatically start tracking Core Web Vitals (LCP, FID, CLS, etc.) once deployed to Vercel
+- The component is lightweight and won't impact application performance
+- Metrics will be visible in the Vercel dashboard under the Speed Insights section
+- No additional configuration is required; the default settings are optimal for most use cases
