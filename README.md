@@ -165,12 +165,12 @@ Signup → /api/me (needs_onboarding: true) → /onboarding → creates agency +
 - [x] Staff management
 - [x] HIPAA audit logging
 - [x] 7-day trial system
+- [x] Visual redesign (Figma)
 
 ### 🔜 Up Next
 - [ ] Stripe billing (wire "Upgrade Now" to Stripe Checkout)
 - [ ] BAAs with subprocessors
 - [ ] Terms of Service / Privacy Policy / BAA template
-- [ ] Visual redesign (Figma)
 
 ---
 
